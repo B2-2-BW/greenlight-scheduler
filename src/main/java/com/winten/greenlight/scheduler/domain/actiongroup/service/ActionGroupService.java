@@ -1,0 +1,41 @@
+
+package com.winten.greenlight.scheduler.domain.actiongroup.service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.winten.greenlight.scheduler.db.repository.redis.actiongroup.ActionGroupEntity;
+import com.winten.greenlight.scheduler.db.repository.redis.actiongroup.repository.ActionGroupRepository;
+import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
+import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ActionGroupService {
+    private final ActionGroupRepository actionGroupRepository;
+    private final RedisKeyBuilder redisKeyBuilder;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    public List<ActionGroup> getAllActionGroupMeta() {
+        String keys = redisKeyBuilder.allActionGroupMeta();
+
+        //ActionGroupEntity 리스트로 불러와준다.
+        List<ActionGroupEntity> actionGroupEntities = actionGroupRepository.getAllActionGroupsMetaEntity(keys);
+
+        //ActionGroupEntity 형식의 list 를 ActionGroup 으로 매핑
+        List<ActionGroup> actionGroups = new ArrayList<>(actionGroupEntities.size());
+        for (ActionGroupEntity actionGroupEntity : actionGroupEntities) {
+            ActionGroup actionGroup = objectMapper.convertValue(actionGroupEntity, ActionGroup.class);
+            actionGroups.add(actionGroup);
+        }
+
+        return actionGroups;
+    }
+}

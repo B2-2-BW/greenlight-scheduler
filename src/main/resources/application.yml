@@ -1,0 +1,72 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: greenlight-scheduler
+  profiles:
+    active: local
+
+---
+
+spring.config.activate.on-profile: local
+spring:
+  data:
+    redis:
+      cluster:
+        nodes:
+          - ${REDIS_CLUSTER_MASTER_NODE_1}
+          - ${REDIS_CLUSTER_MASTER_NODE_2}
+          - ${REDIS_CLUSTER_MASTER_NODE_3}
+          - ${REDIS_CLUSTER_WORKER_NODE_1}
+          - ${REDIS_CLUSTER_WORKER_NODE_2}
+          - ${REDIS_CLUSTER_WORKER_NODE_3}
+      password: ${REDIS_PASSWORD}
+      key-prefix: ${REDIS_KEY_PREFIX}
+
+---
+
+spring.config.activate.on-profile: dev
+spring:
+  data:
+    redis:
+      cluster:
+        nodes:
+          - ${REDIS_CLUSTER_MASTER_NODE_1}
+          - ${REDIS_CLUSTER_MASTER_NODE_2}
+          - ${REDIS_CLUSTER_MASTER_NODE_3}
+          - ${REDIS_CLUSTER_WORKER_NODE_1}
+          - ${REDIS_CLUSTER_WORKER_NODE_2}
+          - ${REDIS_CLUSTER_WORKER_NODE_3}
+      password: ${REDIS_PASSWORD}
+      key-prefix: ${REDIS_KEY_PREFIX}
+
+---
+
+spring.config.activate.on-profile: live
+spring:
+  data:
+    redis:
+      cluster:
+        nodes:
+          - ${REDIS_CLUSTER_MASTER_NODE_1}
+          - ${REDIS_CLUSTER_MASTER_NODE_2}
+          - ${REDIS_CLUSTER_MASTER_NODE_3}
+          - ${REDIS_CLUSTER_WORKER_NODE_1}
+          - ${REDIS_CLUSTER_WORKER_NODE_2}
+          - ${REDIS_CLUSTER_WORKER_NODE_3}
+      password: ${REDIS_PASSWORD}
+      key-prefix: ${REDIS_KEY_PREFIX}
+
+management:
+  endpoints:
+    web:
+      base-path: ${SCHEDULER_ACTUATOR_PATH:/actuator}
+
+logging:
+  config: classpath:logback/logback-${spring.profiles.active}.xml
+  level:
+    root: INFO
+    com.winten: DEBUG
+    com.winten.greenlight.scheduler: DEBUG
+    org.springframework.data.redis: DEBUG
