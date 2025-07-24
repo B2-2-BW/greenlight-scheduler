@@ -1,1 +1,1 @@
-rootProject = 'greenlight-scheduler'
+rootProject.name = 'greenlight-scheduler'

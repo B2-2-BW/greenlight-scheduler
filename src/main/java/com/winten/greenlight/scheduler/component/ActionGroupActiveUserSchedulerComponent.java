@@ -1,37 +1,48 @@
-package com.winten.greenlight.scheduler.domain.actiongroup.service;
+package com.winten.greenlight.scheduler.component;
 
+import com.winten.greenlight.scheduler.component.base.AbstractSchedulerComponent;
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
-import com.winten.greenlight.scheduler.domain.customer.CustomerService;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
+import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupAccessLogService;
+import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupService;
+import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupStatusService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * AbstractSchedulerComponent를 상속 한
+ * ActionGroupActiveUserSchedulerComponent
+ * @see AbstractSchedulerComponent
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ActionGroupActiveUserSchedulerService {
+public class ActionGroupActiveUserSchedulerComponent extends AbstractSchedulerComponent {
     private final ActionGroupService actionGroupService;
     private final ActionGroupStatusService actionGroupStatusService;
     private final ActionGroupAccessLogService actionGroupAccessLogService;
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private ScheduledFuture<?> scheduledTask;
 
-    @PostConstruct
-    public void scheduleActiveCustomersCalculate() {
+    /**
+     * AbstractSchedulerComponent 의 registerScheduler 상세 구현
+     * ActionGroupActiveUserScheduler 역할을 수행
+     */
+    @Override
+    protected void registerScheduler() {
         scheduledTask = scheduler.scheduleAtFixedRate(() -> {
+            if (shouldStop()){
+                // 현재 상태 확인 후 신규 스케줄 미동작 처리
+                log.info("[CAPACITY] Scheduler tick: stopping");
+                return;
+            }
+
             try {
-                log.info("Scheduler tick: starting [scheduleActiveCustomersCalculate]");
+                log.info("[CAPACITY] Scheduler tick: starting");
 
                 //FIXME 0.어드민 화면에 구현 된 사용자 경험 우선(3초)/서버 안정성 우선(5초) 별도 redis 키를 통해 가져올 예정, 현재는 5초 하드코딩
-                int expiredSeconds = 5;
+                var expiredSeconds = 5;
                 //1. action_group:*:meta 전체 액션 그룹 메타 데이터 호출
                 List<ActionGroup> actionGroups = actionGroupService.getAllActionGroupMeta();
                 //actionGroups 데이터를 통한 for 루프 시작
@@ -47,44 +58,20 @@ public class ActionGroupActiveUserSchedulerService {
                     //저장: key= action_group:{actionGroup.getId()}:status 의 value=availableCapacity, currentActiveCustomers의 json 양식
                     actionGroupStatusService.saveActionGroupStatusBy(actionGroup.getId(), currentActiveCustomers, availableCapacity);
 
-                    log.info("[scheduleActiveCustomersCalculate] SAVED action_group:{}:status successful",actionGroup.getId());
+                    log.info("[CAPACITY] Scheduler SAVED action_group:{}:status successful",actionGroup.getId());
                 }
                 if(actionGroups.isEmpty()){
-                    log.info("[scheduleActiveCustomersCalculate] NO action groups are available");
+                    log.info("[CAPACITY] Scheduler NO action groups are available");
                 } else {
-                    log.info("[scheduleActiveCustomersCalculate] {} action groups successful",actionGroups.size());
+                    log.info("[CAPACITY] Scheduler {} action groups successful",actionGroups.size());
                 }
 
             } catch (Exception e) {
-                log.error("[scheduleActiveCustomersCalculate] encountered an error", e);
+                log.error("[CAPACITY] Scheduler encountered an error", e);
             }
         }, 0, 1, TimeUnit.SECONDS);
 
-        log.info("[scheduleActiveCustomersCalculate] started");
+        log.info("[CAPACITY] Scheduler started");
     }
 
-    @PreDestroy
-    public void shutdownScheduler() {
-        if (scheduledTask != null && !scheduledTask.isCancelled()) {
-            scheduledTask.cancel(true);
-        }
-        scheduler.shutdown();
-        log.info("[scheduleActiveCustomersCalculate] stopped");
-    }
-
-    public boolean isRunning() {
-        return scheduledTask != null && !scheduledTask.isCancelled();
-    }
-
-    public void startScheduler() {
-        if (scheduledTask == null || scheduledTask.isCancelled()) {
-            scheduleActiveCustomersCalculate();
-        }
-    }
-
-    public void stopScheduler() {
-        if (scheduledTask != null && !scheduledTask.isCancelled()) {
-            scheduledTask.cancel(true);
-        }
-    }
 }
