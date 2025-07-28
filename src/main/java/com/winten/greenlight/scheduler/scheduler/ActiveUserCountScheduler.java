@@ -1,13 +1,13 @@
-package com.winten.greenlight.scheduler.component;
+package com.winten.greenlight.scheduler.scheduler;
 
-import com.winten.greenlight.scheduler.component.base.AbstractSchedulerComponent;
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
 import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupAccessLogService;
 import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupService;
 import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupStatusService;
+import com.winten.greenlight.scheduler.domain.admin.service.AdminPreferenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -15,15 +15,16 @@ import java.util.concurrent.TimeUnit;
 /**
  * AbstractSchedulerComponent를 상속 한
  * ActionGroupActiveUserSchedulerComponent
- * @see AbstractSchedulerComponent
+ * @see AbstractScheduler
  */
 @Slf4j
-@Service
+@Component
 @RequiredArgsConstructor
-public class ActionGroupActiveUserSchedulerComponent extends AbstractSchedulerComponent {
+public class ActiveUserCountScheduler extends AbstractScheduler {
     private final ActionGroupService actionGroupService;
     private final ActionGroupStatusService actionGroupStatusService;
     private final ActionGroupAccessLogService actionGroupAccessLogService;
+    private final AdminPreferenceService adminPreferenceService;
 
     /**
      * AbstractSchedulerComponent 의 registerScheduler 상세 구현
@@ -35,14 +36,16 @@ public class ActionGroupActiveUserSchedulerComponent extends AbstractSchedulerCo
             if (shouldStop()){
                 // 현재 상태 확인 후 신규 스케줄 미동작 처리
                 log.info("[CAPACITY] Scheduler tick: stopping");
+                //log.info("[CAPACITY] Scheduler tick: stopped",Sch);
                 return;
             }
 
             try {
                 log.info("[CAPACITY] Scheduler tick: starting");
 
-                //FIXME 0.어드민 화면에 구현 된 사용자 경험 우선(3초)/서버 안정성 우선(5초) 별도 redis 키를 통해 가져올 예정, 현재는 5초 하드코딩
-                var expiredSeconds = 5;
+                //0.어드민 화면에 구현 된 사용자 경험 우선(3초)/서버 안정성 우선(5초) 별도 redis 키를 통해 가져옴
+                int expiredSeconds = adminPreferenceService.getAdminPreference().getCurrentActiveCustomers();
+                log.info("[CAPACITY] Scheduler: Current active customers expired seconds: {}", expiredSeconds);
                 //1. action_group:*:meta 전체 액션 그룹 메타 데이터 호출
                 List<ActionGroup> actionGroups = actionGroupService.getAllActionGroupMeta();
                 //actionGroups 데이터를 통한 for 루프 시작

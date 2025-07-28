@@ -15,10 +15,6 @@ public class RedisKeyBuilder {
         return String.format("%s:action_group:*:meta", prefix);
     }
 
-    public String actionGroupMeta(Long actionGroupId) {
-        return String.format("%s:action_group:%d:meta", prefix, actionGroupId);
-    }
-
     public String allActionGroupStatus() {
         return String.format("%s:action_group:*:status", prefix);
     }
@@ -31,7 +27,11 @@ public class RedisKeyBuilder {
         return String.format("%s:action_group:%d:accesslog", prefix, actionGroupId);
     }
 
-    public String actionGroupQueue (Long actionGroupId, WaitStatus waitStatus) {
+    public String actionGroupQueue(Long actionGroupId, WaitStatus waitStatus) {
         return String.format("%s:action_group:%d:queue:%s", prefix, actionGroupId, waitStatus);
+    }
+
+    public String adminPreference() {
+        return String.format("%s:admin:preference", prefix);
     }
 }

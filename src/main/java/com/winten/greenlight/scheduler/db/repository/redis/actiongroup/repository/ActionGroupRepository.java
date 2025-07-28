@@ -23,7 +23,7 @@ public class ActionGroupRepository {
      *
      * @return List<ActionGroupEntity>
      */
-    public List<ActionGroupEntity> getAllActionGroupsMetaEntity(String allKey) {
+    public List<ActionGroupEntity> getAllActionGroupsMetaEntityBy(String allKey) {
         Set<String> keys = jsonRedisTemplate.keys(allKey);
         if (keys.isEmpty()) {
             return Collections.emptyList();

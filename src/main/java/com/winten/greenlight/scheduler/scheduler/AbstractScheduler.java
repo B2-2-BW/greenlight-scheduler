@@ -1,4 +1,4 @@
-package com.winten.greenlight.scheduler.component.base;
+package com.winten.greenlight.scheduler.scheduler;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -13,7 +13,7 @@ import java.util.concurrent.ScheduledFuture;
  * Base Scheduler Component
  */
 @Slf4j
-public abstract class AbstractSchedulerComponent {
+public abstract class AbstractScheduler {
     protected ScheduledFuture<?> scheduledTask;
     protected final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     /**

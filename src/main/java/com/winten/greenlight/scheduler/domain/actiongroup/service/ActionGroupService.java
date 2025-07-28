@@ -27,7 +27,7 @@ public class ActionGroupService {
         String keys = redisKeyBuilder.allActionGroupMeta();
 
         //ActionGroupEntity 리스트로 불러와준다.
-        List<ActionGroupEntity> actionGroupEntities = actionGroupRepository.getAllActionGroupsMetaEntity(keys);
+        List<ActionGroupEntity> actionGroupEntities = actionGroupRepository.getAllActionGroupsMetaEntityBy(keys);
 
         //ActionGroupEntity 형식의 list 를 ActionGroup 으로 매핑
         List<ActionGroup> actionGroups = new ArrayList<>(actionGroupEntities.size());

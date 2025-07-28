@@ -1,12 +1,11 @@
-package com.winten.greenlight.scheduler.component;
+package com.winten.greenlight.scheduler.scheduler;
 
-import com.winten.greenlight.scheduler.component.base.AbstractSchedulerComponent;
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupStatus;
 import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupStatusService;
 import com.winten.greenlight.scheduler.domain.customer.CustomerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.concurrent.*;
@@ -14,12 +13,12 @@ import java.util.concurrent.*;
 /**
  * AbstractSchedulerComponent를 상속 한
  * CustomerRelocationSchedulerComponent
- * @see AbstractSchedulerComponent
+ * @see AbstractScheduler
  */
 @Slf4j
-@Service
+@Component
 @RequiredArgsConstructor
-public class CustomerRelocationSchedulerComponent extends AbstractSchedulerComponent {
+public class CustomerRelocationScheduler extends AbstractScheduler {
     private final ActionGroupStatusService actionGroupStatusService;
     private final CustomerService customerService;
 

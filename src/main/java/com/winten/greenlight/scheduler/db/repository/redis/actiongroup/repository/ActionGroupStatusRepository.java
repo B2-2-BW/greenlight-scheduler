@@ -23,7 +23,7 @@ public class ActionGroupStatusRepository {
      *
      * @return List<ActionGroupStatusEntity>
      */
-    public List<ActionGroupStatusEntity> getAllActionGroupsStatusEntity(String allKey) {
+    public List<ActionGroupStatusEntity> getAllActionGroupsStatusEntityBy(String allKey) {
         Set<String> keys = jsonRedisTemplate.keys(allKey);
         if (keys.isEmpty()) {
             return Collections.emptyList();

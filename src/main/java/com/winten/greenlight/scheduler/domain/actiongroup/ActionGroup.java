@@ -2,14 +2,12 @@ package com.winten.greenlight.scheduler.domain.actiongroup;
 
 import com.winten.greenlight.scheduler.db.repository.redis.actiongroup.ActionGroupEntity;
 import com.winten.greenlight.scheduler.support.dto.AuditDto;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.io.Serializable;
 import java.sql.Timestamp;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 @Builder
 @AllArgsConstructor

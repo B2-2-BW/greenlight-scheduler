@@ -30,7 +30,7 @@ public class ActionGroupStatusService {
         String keys = redisKeyBuilder.allActionGroupStatus();
 
         //ActionGroupStatusEntity 리스트로 불러와준다.
-        List<ActionGroupStatusEntity> actionGroupStatusEntities = actionGroupStatusRepository.getAllActionGroupsStatusEntity(keys);
+        List<ActionGroupStatusEntity> actionGroupStatusEntities = actionGroupStatusRepository.getAllActionGroupsStatusEntityBy(keys);
 
         //ActionGroupStatusEntity 형식의 list 를 ActionGroupStatus 으로 매핑
         List<ActionGroupStatus> actionGroupStatuses = new ArrayList<>(actionGroupStatusEntities.size());
