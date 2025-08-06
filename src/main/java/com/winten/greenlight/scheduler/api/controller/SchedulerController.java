@@ -16,40 +16,36 @@ public class SchedulerController {
     private final SchedulerService schedulerService;
 
     @PostMapping("/{schedulerType}/start")
-    public ResponseEntity<SchedulerResponse> start(@PathVariable String schedulerType) {
-        var type = SchedulerType.from(schedulerType);
-        schedulerService.start(type);
+    public ResponseEntity<SchedulerResponse> start(@PathVariable SchedulerType schedulerType) {
+        schedulerService.start(schedulerType);
         return ResponseEntity.ok(
                 SchedulerResponse.builder()
                         .status(SchedulerStatus.RUNNING)
-                        .schedulerType(type)
+                        .schedulerType(schedulerType)
                         .message("Scheduler started")
                         .build()
         );
     }
 
     @PostMapping("/{schedulerType}/stop")
-    public ResponseEntity<SchedulerResponse> stop(@PathVariable String schedulerType) {
-        var type = SchedulerType.from(schedulerType);
-        schedulerService.stop(type);
+    public ResponseEntity<SchedulerResponse> stop(@PathVariable SchedulerType schedulerType) {
+        schedulerService.stop(schedulerType);
         return ResponseEntity.ok(
                 SchedulerResponse.builder()
                         .status(SchedulerStatus.STOPPED)
-                        .schedulerType(type)
-                        .message("Scheduler started")
+                        .schedulerType(schedulerType)
+                        .message("Scheduler stopped")
                         .build()
         );
     }
 
     @GetMapping("/{schedulerType}/status")
-    public ResponseEntity<SchedulerResponse> status(@PathVariable String schedulerType) {
-        var type = SchedulerType.from(schedulerType);
-        SchedulerStatus status = schedulerService.getStatus(type);
+    public ResponseEntity<SchedulerResponse> status(@PathVariable SchedulerType schedulerType) {
+        SchedulerStatus status = schedulerService.getStatus(schedulerType);
         return ResponseEntity.ok(
                 SchedulerResponse.builder()
                         .status(status)
-                        .schedulerType(type)
-                        .message("Scheduler started")
+                        .schedulerType(schedulerType)
                         .build()
         );
     }

@@ -13,12 +13,22 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum SchedulerType {
-    RELOCATION,
-    CAPACITY;
+    RELOCATION, /* 고객 이동 스케쥴러 */
+    CAPACITY, /* 대기열 활성사용자수 계산 스케쥴러 */
+    UNKNOWN /* 알 수 없음 */
+    ;
 
     @JsonCreator
     public static SchedulerType from(String value) {
         return SchedulerType.valueOf(value.toUpperCase());
+    }
+
+    public static SchedulerType of(String source) {
+        try {
+            return SchedulerType.valueOf(source.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return UNKNOWN;
+        }
     }
 
     @JsonValue
