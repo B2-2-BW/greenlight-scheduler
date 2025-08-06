@@ -1,6 +1,8 @@
 
 package com.winten.greenlight.scheduler.api.controller;
 
+import com.winten.greenlight.scheduler.domain.scheduler.SchedulerService;
+import com.winten.greenlight.scheduler.domain.scheduler.SchedulerStatus;
 import com.winten.greenlight.scheduler.scheduler.factory.SchedulerFactory;
 import com.winten.greenlight.scheduler.scheduler.factory.SchedulerType;
 import lombok.RequiredArgsConstructor;
@@ -12,23 +14,44 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class SchedulerController {
 
-    private final SchedulerFactory schedulerComponentFactory;
+    private final SchedulerService schedulerService;
 
     @PostMapping("/{schedulerType}/start")
-    public ResponseEntity<String> start(@PathVariable String schedulerType) {
-        schedulerComponentFactory.getSchedulerComponentBy(SchedulerType.from(schedulerType)).start();
-        return ResponseEntity.ok("[" + schedulerType + "] scheduler started");
+    public ResponseEntity<SchedulerResponse> start(@PathVariable String schedulerType) {
+        var type = SchedulerType.from(schedulerType);
+        schedulerService.start(type);
+        return ResponseEntity.ok(
+                SchedulerResponse.builder()
+                        .status(SchedulerStatus.RUNNING)
+                        .schedulerType(type)
+                        .message("Scheduler started")
+                        .build()
+        );
     }
 
     @PostMapping("/{schedulerType}/stop")
-    public ResponseEntity<String> stop(@PathVariable String schedulerType) {
-        schedulerComponentFactory.getSchedulerComponentBy(SchedulerType.from(schedulerType)).stop();
-        return ResponseEntity.ok("[" + schedulerType + "] scheduler stopped");
+    public ResponseEntity<SchedulerResponse> stop(@PathVariable String schedulerType) {
+        var type = SchedulerType.from(schedulerType);
+        schedulerService.stop(type);
+        return ResponseEntity.ok(
+                SchedulerResponse.builder()
+                        .status(SchedulerStatus.STOPPED)
+                        .schedulerType(type)
+                        .message("Scheduler started")
+                        .build()
+        );
     }
 
     @GetMapping("/{schedulerType}/status")
-    public ResponseEntity<String> status(@PathVariable String schedulerType) {
-        boolean isRunning = schedulerComponentFactory.getSchedulerComponentBy(SchedulerType.from(schedulerType)).isRunning();
-        return ResponseEntity.ok("[" + schedulerType + "] scheduler is " + (isRunning ? "Running" : "Stopped"));
+    public ResponseEntity<SchedulerResponse> status(@PathVariable String schedulerType) {
+        var type = SchedulerType.from(schedulerType);
+        SchedulerStatus status = schedulerService.getStatus(type);
+        return ResponseEntity.ok(
+                SchedulerResponse.builder()
+                        .status(status)
+                        .schedulerType(type)
+                        .message("Scheduler started")
+                        .build()
+        );
     }
 }
