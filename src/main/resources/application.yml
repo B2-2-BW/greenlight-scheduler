@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 27070
 
 spring:
   application:
@@ -58,15 +58,10 @@ spring:
       password: ${REDIS_PASSWORD}
       key-prefix: ${REDIS_KEY_PREFIX}
 
-management:
-  endpoints:
-    web:
-      base-path: ${SCHEDULER_ACTUATOR_PATH:/actuator}
-
 logging:
   config: classpath:logback/logback-${spring.profiles.active}.xml
   level:
-    root: INFO
-    com.winten: DEBUG
-    com.winten.greenlight.scheduler: DEBUG
-    org.springframework.data.redis: DEBUG
+    root: ERROR
+    com.winten: ERROR
+    com.winten.greenlight.scheduler: ERROR
+    org.springframework.data.redis: ERROR
