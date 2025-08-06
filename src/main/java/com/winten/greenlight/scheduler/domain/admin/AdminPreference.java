@@ -11,13 +11,12 @@ import java.io.Serializable;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class AdminPreference extends AuditDto implements Serializable{
+public class AdminPreference extends AuditDto implements Serializable {
 
     /**
-     * 이 그룹에 속한 모든 Action에 걸쳐 허용되는 최대 동시 활성 사용자(또는 세션)의 수입니다.
-     * 이 값을 초과하는 요청은 대기열로 보내집니다.
+     * 활성 사용자로 간주하기 위한 최소 활동 시간(초)
      */
-    private Integer currentActiveCustomers;
+    private Integer activeCustomerDurationSeconds;
 
     /**
      * 그룹 전체의 활성화 여부를 나타내는 플래그입니다.

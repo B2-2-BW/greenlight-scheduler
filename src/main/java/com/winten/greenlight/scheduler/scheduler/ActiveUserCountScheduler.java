@@ -40,18 +40,25 @@ public class ActiveUserCountScheduler extends AbstractScheduler {
                 return;
             }
 
-            try {
-                log.info("[CAPACITY] Scheduler tick: starting");
+            log.info("[CAPACITY] Scheduler tick: starting");
 
-                //0.어드민 화면에 구현 된 사용자 경험 우선(3초)/서버 안정성 우선(5초) 별도 redis 키를 통해 가져옴
-                int expiredSeconds = adminPreferenceService.getAdminPreference().getCurrentActiveCustomers();
-                log.info("[CAPACITY] Scheduler: Current active customers expired seconds: {}", expiredSeconds);
+            //0.어드민 화면에 구현 된 사용자 경험 우선(3초)/서버 안정성 우선(5초) 별도 redis 키를 통해 가져옴
+            int activeDurationSeconds;
+            try {
+                activeDurationSeconds = adminPreferenceService.getAdminPreference().getActiveCustomerDurationSeconds();
+            } catch (Exception e) {
+                activeDurationSeconds = 5;
+                log.error("failed to get admin preference", e);
+            }
+            log.info("[CAPACITY] Scheduler: Current active customers expired seconds: {}", activeDurationSeconds);
+
+            try {
                 //1. action_group:*:meta 전체 액션 그룹 메타 데이터 호출
                 List<ActionGroup> actionGroups = actionGroupService.getAllActionGroupMeta();
                 //actionGroups 데이터를 통한 for 루프 시작
                 for(ActionGroup actionGroup : actionGroups) {
                     //삭제: expiredMinute 지난 고객 accesslog
-                    actionGroupAccessLogService.removeOverExpireMinuteCustomersFromActionGroupAccessLogBy(actionGroup.getId(), expiredSeconds);
+                    actionGroupAccessLogService.removeOverExpireMinuteCustomersFromActionGroupAccessLogBy(actionGroup.getId(), activeDurationSeconds);
 
                     //집계/계산: {actionGroupId} 별 action_group:{actionGroupId}:accesslog 키의 활성 사용자 수(currentActiveCustomers)
                     int maxActiveCustomers = actionGroup.getMaxActiveCustomers();
