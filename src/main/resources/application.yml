@@ -6,6 +6,28 @@ spring:
     name: greenlight-scheduler
   profiles:
     active: local
+  url: ${SERVER_URL}
+
+springdoc:
+  swagger-ui:
+    groups-order: DESC
+    operationsSorter: method
+    disable-swagger-default-url: true
+    display-request-duration: true
+    defaultModelsExpandDepth: -1
+  api-docs:
+    path: /api-docs
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+  paths-to-match:
+    - /**
+    -
+
+logging:
+  config: classpath:logback/logback-${spring.profiles.active}.xml
+  level:
+    root: INFO
+    com.winten: DEBUG
 
 ---
 
@@ -59,7 +81,6 @@ spring:
       key-prefix: ${REDIS_KEY_PREFIX}
 
 logging:
-  config: classpath:logback/logback-${spring.profiles.active}.xml
   level:
     root: ERROR
     com.winten: ERROR

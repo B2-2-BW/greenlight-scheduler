@@ -3,7 +3,6 @@ package com.winten.greenlight.scheduler.api.controller;
 
 import com.winten.greenlight.scheduler.domain.scheduler.SchedulerService;
 import com.winten.greenlight.scheduler.domain.scheduler.SchedulerStatus;
-import com.winten.greenlight.scheduler.scheduler.factory.SchedulerFactory;
 import com.winten.greenlight.scheduler.scheduler.factory.SchedulerType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
