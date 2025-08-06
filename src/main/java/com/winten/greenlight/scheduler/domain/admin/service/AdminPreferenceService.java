@@ -8,7 +8,6 @@ import com.winten.greenlight.scheduler.domain.admin.AdminPreference;
 import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -17,9 +16,7 @@ import org.springframework.stereotype.Service;
 public class AdminPreferenceService {
     private final AdminPreferenceRepository adminPreferenceRepository;
     private final RedisKeyBuilder redisKeyBuilder;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     public AdminPreference getAdminPreference() {
         String key = redisKeyBuilder.adminPreference();

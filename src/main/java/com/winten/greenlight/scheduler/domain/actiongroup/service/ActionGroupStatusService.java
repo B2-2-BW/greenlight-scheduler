@@ -8,7 +8,6 @@ import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupStatus;
 import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -22,9 +21,7 @@ import java.util.Map;
 public class ActionGroupStatusService {
     private final ActionGroupStatusRepository actionGroupStatusRepository;
     private final RedisKeyBuilder redisKeyBuilder;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     public List<ActionGroupStatus> getAllActionGroupStatus() {
         String keys = redisKeyBuilder.allActionGroupStatus();

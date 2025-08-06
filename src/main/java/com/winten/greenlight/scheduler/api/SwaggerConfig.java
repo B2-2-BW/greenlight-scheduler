@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
-// http://localhost:28080/swagger-ui/index.html
 @Configuration
 public class SwaggerConfig {
     @Value("${server.url}")

@@ -26,9 +26,9 @@ public class ActionGroupAccessLogService {
             throw new IllegalArgumentException("expireMinute must be positive.");
         }
 
-        // 현재 시각 기준 N초 이전(ex: 5분 = 300초) 이전 timestamp 계산
+        // 현재 시각 기준 N초 이전(ex: 1초 = 1000밀리초) 이전 timestamp 계산
         long currentTimeMillis = System.currentTimeMillis();
-        long expireTime = currentTimeMillis - (expireSeconds * 60 * 1000L);
+        long expireTime = currentTimeMillis - (expireSeconds * 1000L);
 
         actionGroupAccesslogRepository.removeOverExpireMinuteCustomersFromActionGroupAccessLogBy(key, expireTime);
     }
