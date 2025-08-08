@@ -32,6 +32,6 @@ public class RedisKeyBuilder {
     }
 
     public String adminPreference() {
-        return String.format("%s:admin:preference", prefix);
+        return prefix + "admin:preference";
     }
 }
