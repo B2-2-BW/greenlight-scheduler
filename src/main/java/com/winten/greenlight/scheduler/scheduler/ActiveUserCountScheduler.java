@@ -43,9 +43,12 @@ public class ActiveUserCountScheduler extends AbstractScheduler {
             log.info("[CAPACITY] Scheduler tick: starting");
 
             //0.어드민 화면에 구현 된 사용자 경험 우선(3초)/서버 안정성 우선(5초) 별도 redis 키를 통해 가져옴
-            int activeDurationSeconds;
+            Integer activeDurationSeconds;
             try {
                 activeDurationSeconds = adminPreferenceService.getAdminPreference().getActiveCustomerDurationSeconds();
+                if (activeDurationSeconds == null) {
+                    throw new Exception("activeDurationSeconds is null");
+                }
             } catch (Exception e) {
                 activeDurationSeconds = 5;
                 log.error("failed to get admin preference", e);
