@@ -29,7 +29,7 @@ public class SwaggerConfig {
                                 .url("API license URL"))
                 )
                 .servers(List.of(
-                        new Server().url(serverUrl + ":" + serverPort).description("Greenlight Back Office Scheduler Dev API 서버"),
+                        new Server().url(serverUrl).description("Greenlight Back Office Scheduler Dev API 서버"),
                         new Server().url("http://localhost:"+serverPort).description("Greenlight Back Office Scheduler Localhost API 서버")
                 ));
     }
