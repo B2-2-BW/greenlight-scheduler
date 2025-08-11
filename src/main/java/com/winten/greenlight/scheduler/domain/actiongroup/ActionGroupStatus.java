@@ -28,6 +28,8 @@ public class ActionGroupStatus implements Serializable {
      */
     private Long availableCapacity;
 
+    private Long waitingQueueCount;
+
     public ActionGroupStatus(final ActionGroupStatusEntity actionGroupStatusEntity) {
         this.id = actionGroupStatusEntity.getId();
         this.currentActiveCustomers = actionGroupStatusEntity.getCurrentActiveCustomers();

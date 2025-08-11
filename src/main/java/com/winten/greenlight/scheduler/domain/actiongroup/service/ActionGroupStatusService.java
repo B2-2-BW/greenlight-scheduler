@@ -40,21 +40,19 @@ public class ActionGroupStatusService {
 
     /**
      * {actionGroupId} 별 action_group:{actionGroupId}:status 키의 {currentActiveCustomers}, {availableCapacity} 값 저장
-     * 
-     * @param actionGroupId          Action Group PK
-     * @param currentActiveCustomers 저장 될 현재 활성 사용자 수
-     * @param availableCapacity 계산된 유입 가능한 Capacity(케파)
+     *
      */
-    public void saveActionGroupStatusBy(Long actionGroupId, Integer currentActiveCustomers, Integer availableCapacity) {
-        String key = redisKeyBuilder.actionGroupStatus(actionGroupId);
-        if (actionGroupId <= 0L) {
+    public void saveActionGroupStatusBy(ActionGroupStatus status) {
+        if (status.getId() <= 0L) {
             throw new IllegalArgumentException("actionGroupId must be positive.");
         }
 
+        String key = redisKeyBuilder.actionGroupStatus(status.getId());
         Map<Object, Object> statusMap = new HashMap<>();
-        statusMap.put("id", actionGroupId);
-        statusMap.put("currentActiveCustomers", currentActiveCustomers);
-        statusMap.put("availableCapacity", availableCapacity);
+        statusMap.put("id", status.getId());
+        statusMap.put("currentActiveCustomers", status.getCurrentActiveCustomers());
+        statusMap.put("availableCapacity", status.getAvailableCapacity());
+        statusMap.put("waitingQueueCount", status.getWaitingQueueCount());
 
         //JSON 문자열로 직렬화
         //String jsonString = objectMapper.convertValue(statusMap, String.class);

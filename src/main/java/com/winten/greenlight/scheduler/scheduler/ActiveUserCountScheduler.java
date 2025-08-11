@@ -1,6 +1,7 @@
 package com.winten.greenlight.scheduler.scheduler;
 
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
+import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupStatus;
 import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupAccessLogService;
 import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupService;
 import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupStatusService;
@@ -67,10 +68,16 @@ public class ActiveUserCountScheduler extends AbstractScheduler {
                     int maxActiveCustomers = actionGroup.getMaxActiveCustomers();
                     int currentActiveCustomers = actionGroupAccessLogService.getCurrentActiveCustomersCountFromActionGroupAccessLogBy(actionGroup.getId());
                     Long waitingQueueCount = actionGroupService.getWaitingQueueCountByActionGroupId(actionGroup.getId());
-                    int availableCapacity = Math.max(maxActiveCustomers - currentActiveCustomers - waitingQueueCount.intValue(), 0);
+                    int availableCapacity = Math.max(maxActiveCustomers - currentActiveCustomers, 0);
 
                     //저장: key= action_group:{actionGroup.getId()}:status 의 value=availableCapacity, currentActiveCustomers의 json 양식
-                    actionGroupStatusService.saveActionGroupStatusBy(actionGroup.getId(), currentActiveCustomers, availableCapacity);
+                    ActionGroupStatus status = ActionGroupStatus.builder()
+                            .id(actionGroup.getId())
+                            .currentActiveCustomers((long) currentActiveCustomers)
+                            .availableCapacity((long) availableCapacity)
+                            .waitingQueueCount(waitingQueueCount)
+                            .build();
+                    actionGroupStatusService.saveActionGroupStatusBy(status);
 
                     log.info("[CAPACITY] Scheduler SAVED action_group:{}:status successful",actionGroup.getId());
                 }
