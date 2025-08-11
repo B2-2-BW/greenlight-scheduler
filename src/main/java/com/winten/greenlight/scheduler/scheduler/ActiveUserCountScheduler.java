@@ -66,7 +66,8 @@ public class ActiveUserCountScheduler extends AbstractScheduler {
                     //집계/계산: {actionGroupId} 별 action_group:{actionGroupId}:accesslog 키의 활성 사용자 수(currentActiveCustomers)
                     int maxActiveCustomers = actionGroup.getMaxActiveCustomers();
                     int currentActiveCustomers = actionGroupAccessLogService.getCurrentActiveCustomersCountFromActionGroupAccessLogBy(actionGroup.getId());
-                    int availableCapacity = Math.max(maxActiveCustomers - currentActiveCustomers, 0);
+                    Long waitingQueueCount = actionGroupService.getWaitingQueueCountByActionGroupId(actionGroup.getId());
+                    int availableCapacity = Math.max(maxActiveCustomers - currentActiveCustomers - waitingQueueCount.intValue(), 0);
 
                     //저장: key= action_group:{actionGroup.getId()}:status 의 value=availableCapacity, currentActiveCustomers의 json 양식
                     actionGroupStatusService.saveActionGroupStatusBy(actionGroup.getId(), currentActiveCustomers, availableCapacity);

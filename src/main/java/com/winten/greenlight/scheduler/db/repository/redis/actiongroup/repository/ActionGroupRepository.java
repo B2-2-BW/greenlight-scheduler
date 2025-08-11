@@ -2,8 +2,10 @@ package com.winten.greenlight.scheduler.db.repository.redis.actiongroup.reposito
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.winten.greenlight.scheduler.db.repository.redis.actiongroup.ActionGroupEntity;
+import com.winten.greenlight.scheduler.domain.customer.WaitStatus;
 import com.winten.greenlight.scheduler.support.error.CoreException;
 import com.winten.greenlight.scheduler.support.error.ErrorType;
+import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -15,8 +17,10 @@ import java.util.*;
 @Slf4j
 @RequiredArgsConstructor
 public class ActionGroupRepository {
+    private final RedisTemplate<String, String> stringRedisTemplate;
     private final RedisTemplate<String, Object> jsonRedisTemplate;
     private final ObjectMapper objectMapper;
+    private final RedisKeyBuilder redisKeyBuilder;
 
     /**
      * getAllActionGroups 전체 액션그룹 메타(테이블) 정보 가져오기
@@ -43,5 +47,10 @@ public class ActionGroupRepository {
         }
 
         return result;
+    }
+
+    public Long getWaitingQueueCount(Long actionGroupId) {
+        String key = redisKeyBuilder.actionGroupQueue(actionGroupId, WaitStatus.WAITING);
+        return stringRedisTemplate.opsForZSet().size(key);
     }
 }

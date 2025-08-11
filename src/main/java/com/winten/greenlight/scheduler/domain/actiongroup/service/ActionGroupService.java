@@ -36,4 +36,12 @@ public class ActionGroupService {
 
         return actionGroups;
     }
+
+    public Long getWaitingQueueCountByActionGroupId(Long actionGroupId) {
+        Long queueCount = actionGroupRepository.getWaitingQueueCount(actionGroupId);
+        if (queueCount == null) {
+            queueCount = 0L;
+        }
+        return queueCount;
+    }
 }
