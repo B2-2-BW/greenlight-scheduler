@@ -28,10 +28,14 @@ public class RedisKeyBuilder {
     }
 
     public String actionGroupQueue(Long actionGroupId, WaitStatus waitStatus) {
-        return String.format("%s:action_group:%d:queue:%s", prefix, actionGroupId, waitStatus);
+        return prefix + ":action_group:" + actionGroupId + ":queue:" + waitStatus;
     }
 
     public String adminPreference() {
         return prefix + ":admin:preference";
+    }
+
+    public String actionGroupSession(Long actionGroupId) {
+        return prefix + ":action_group:" + actionGroupId + ":session";
     }
 }

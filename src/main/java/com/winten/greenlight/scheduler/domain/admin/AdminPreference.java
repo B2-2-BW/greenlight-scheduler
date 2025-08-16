@@ -24,6 +24,11 @@ public class AdminPreference extends AuditDto implements Serializable {
      */
     private Boolean isGreenlightEnabled;
 
+    /**
+     * 사용자 세션 유지시간 (동시접속자 수 계산 시 활용)
+     */
+    private Integer sessionDurationSeconds;
+
     public AdminPreference(final ActionGroupEntity actionGroupEntity) {
         this.createdBy = actionGroupEntity.getCreatedBy();
         this.createdAt = actionGroupEntity.getCreatedAt();

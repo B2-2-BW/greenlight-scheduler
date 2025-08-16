@@ -17,12 +17,12 @@ public class ActionGroupAccessLogRepository {
      * @param key        Redis key
      * @param expireTime 삭제할 시각
      */
-    public void removeOverExpireMinuteCustomersFromActionGroupAccessLogBy(String key, long expireTime) {
+    public void removeZset(String key, long expireTime) {
         Long count = jsonRedisTemplate.opsForZSet().removeRangeByScore(key, 0, expireTime);
         if (count != null && count > 0) {
-            log.info("[removeOverExpireMinuteCustomersFromActionGroupAccessLogBy] {} expired users removed from {}.", count, key);
+            log.info("[removeZset] {} removed from {}.", count, key);
         } else {
-            log.debug("[removeOverExpireMinuteCustomersFromActionGroupAccessLogBy] No expired users found for removal in {}.", key);
+            log.debug("[removeZset] No candidates found for removal in {}.", key);
         }
     }
 

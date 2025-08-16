@@ -36,7 +36,7 @@ public abstract class AbstractScheduler {
      * @return true/false
      */
     public boolean isRunning() {
-        return scheduledTask != null && !scheduledTask.isCancelled();
+        return scheduledTask != null && !scheduledTask.isDone();
     }
 
     /**
@@ -45,7 +45,7 @@ public abstract class AbstractScheduler {
      * 스케줄러 실행
      */
     public void start() {
-        if (scheduledTask == null || scheduledTask.isCancelled()) {
+        if (scheduledTask == null || scheduledTask.isDone()) {
             isStopped = false;
             registerScheduler();
         }
@@ -57,7 +57,7 @@ public abstract class AbstractScheduler {
      */
     public void stop() {
         isStopped = true;
-        if (scheduledTask != null && !scheduledTask.isCancelled()) {
+        if (scheduledTask != null && !scheduledTask.isDone()) {
             scheduledTask.cancel(false);
         }
     }

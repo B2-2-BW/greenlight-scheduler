@@ -89,7 +89,7 @@ public class ActiveUserCountScheduler extends AbstractScheduler {
             } catch (Exception e) {
                 log.error("[CAPACITY] Scheduler encountered an error", e);
             }
-        }, 0, 100, TimeUnit.MILLISECONDS);
+        }, 0, 300, TimeUnit.MILLISECONDS);
 
         log.info("[CAPACITY] Scheduler started");
     }
