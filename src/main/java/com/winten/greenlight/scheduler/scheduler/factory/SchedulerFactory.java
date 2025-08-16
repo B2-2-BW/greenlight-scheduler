@@ -1,5 +1,6 @@
 package com.winten.greenlight.scheduler.scheduler.factory;
 
+import com.winten.greenlight.scheduler.scheduler.ActiveSessionCleanupScheduler;
 import com.winten.greenlight.scheduler.scheduler.ActiveUserCountScheduler;
 import com.winten.greenlight.scheduler.scheduler.AbstractScheduler;
 import com.winten.greenlight.scheduler.scheduler.CustomerRelocationScheduler;
@@ -19,11 +20,13 @@ import org.springframework.stereotype.Component;
 public class SchedulerFactory {
     private final CustomerRelocationScheduler customerRelocationScheduler;
     private final ActiveUserCountScheduler activeUserCountScheduler;
+    private final ActiveSessionCleanupScheduler activeSessionCleanupScheduler;
 
     public AbstractScheduler getSchedulerComponentBy(SchedulerType type) {
         return switch (type) {
             case RELOCATION -> customerRelocationScheduler;
             case CAPACITY -> activeUserCountScheduler;
+            case CLEANUP_SESSION -> activeSessionCleanupScheduler;
             default -> throw new IllegalArgumentException("Unknown scheduler type: [" + type + "]");
         };
     }

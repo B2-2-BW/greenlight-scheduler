@@ -15,6 +15,7 @@ import lombok.Getter;
 public enum SchedulerType {
     RELOCATION, /* 고객 이동 스케쥴러 */
     CAPACITY, /* 대기열 활성사용자수 계산 스케쥴러 */
+    CLEANUP_SESSION, /* session 정리 컨트롤러 */
     UNKNOWN /* 알 수 없음 */
     ;
 
