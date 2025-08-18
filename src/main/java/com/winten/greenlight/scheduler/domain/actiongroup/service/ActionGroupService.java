@@ -51,7 +51,7 @@ public class ActionGroupService {
         return queueCount;
     }
 
-    public List<Long> getAllAccessLogOrdered(List<ActionGroup> actionGroupList) {
+    public List<Integer> getAllAccessLogOrdered(List<ActionGroup> actionGroupList) {
         List<Object> activeUserCounts = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
             for (ActionGroup actionGroup : actionGroupList) {
                 String key = redisKeyBuilder.actionGroupAccessLog(actionGroup.getId());
@@ -59,6 +59,6 @@ public class ActionGroupService {
             }
             return null;
         });
-        return activeUserCounts.stream().map(obj -> Long.parseLong(obj.toString())).collect(Collectors.toList());
+        return activeUserCounts.stream().map(obj -> Integer.parseInt(obj.toString())).collect(Collectors.toList());
     }
 }

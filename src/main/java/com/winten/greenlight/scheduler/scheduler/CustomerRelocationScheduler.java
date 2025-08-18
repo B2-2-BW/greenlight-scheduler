@@ -39,19 +39,18 @@ public class CustomerRelocationScheduler extends AbstractScheduler {
                 return;
             }
 
-            int activeCustomerDurationSeconds = adminPreferenceService.getActiveCustomerDurationSeconds();
+//            int activeCustomerDurationSeconds = adminPreferenceService.getActiveCustomerDurationSeconds();
 
             try {
                 log.info("[RELOCATION] Scheduler tick: starting");
                 List<ActionGroup> actionGroupList = actionGroupService.getAllActionGroupMeta();
-                List<Long> accessLogCountList = actionGroupService.getAllAccessLogOrdered(actionGroupList);
+                List<Integer> accessLogCountList = actionGroupService.getAllAccessLogOrdered(actionGroupList);
 
                 for (int i = 0; i < actionGroupList.size(); i++) {
                     var actionGroup = actionGroupList.get(i);
                     var accessLogCount = accessLogCountList.get(i);
-                    int averageActiveCustomers = Math.round((float) accessLogCount / activeCustomerDurationSeconds);
 
-                    int availableCapacity = Math.max(actionGroup.getMaxActiveCustomers() - averageActiveCustomers, 0);
+                    int availableCapacity = Math.max(actionGroup.getMaxActiveCustomers() - accessLogCount, 0);
                     // 2. 고객 재배치
                     customerService.relocateCustomerBy(actionGroup.getId(), availableCapacity);
                 }
