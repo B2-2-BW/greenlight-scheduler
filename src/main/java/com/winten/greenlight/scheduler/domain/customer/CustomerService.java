@@ -15,7 +15,7 @@ public class CustomerService {
 
     private final CustomerRepository customerRepository;
 
-    public void relocateCustomerBy(Long actionGroupId, Long availableCapacity) {
+    public void relocateCustomerBy(Long actionGroupId, int availableCapacity) {
         if (availableCapacity < 1) {
             log.info("No customers to relocate. Skipping.");
             return;

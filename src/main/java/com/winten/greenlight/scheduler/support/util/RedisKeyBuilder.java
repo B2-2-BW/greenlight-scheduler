@@ -24,7 +24,7 @@ public class RedisKeyBuilder {
     }
 
     public String actionGroupAccessLog(Long actionGroupId) {
-        return String.format("%s:action_group:%d:accesslog", prefix, actionGroupId);
+        return prefix + ":action_group:" + actionGroupId + ":accesslog";
     }
 
     public String actionGroupQueue(Long actionGroupId, WaitStatus waitStatus) {
@@ -35,7 +35,7 @@ public class RedisKeyBuilder {
         return prefix + ":admin:preference";
     }
 
-    public String actionGroupSession(Long actionGroupId) {
-        return prefix + ":action_group:" + actionGroupId + ":session";
+    public String actionGroupSession() {
+        return prefix + ":session";
     }
 }

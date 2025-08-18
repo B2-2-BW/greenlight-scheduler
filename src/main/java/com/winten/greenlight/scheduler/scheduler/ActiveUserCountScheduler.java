@@ -1,7 +1,6 @@
 package com.winten.greenlight.scheduler.scheduler;
 
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
-import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupStatus;
 import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupAccessLogService;
 import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupService;
 import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupStatusService;
@@ -44,17 +43,9 @@ public class ActiveUserCountScheduler extends AbstractScheduler {
             log.info("[CAPACITY] Scheduler tick: starting");
 
             //0.어드민 화면에 구현 된 사용자 경험 우선(3초)/서버 안정성 우선(5초) 별도 redis 키를 통해 가져옴
-            Integer activeDurationSeconds;
-            try {
-                activeDurationSeconds = adminPreferenceService.getAdminPreference().getActiveCustomerDurationSeconds();
-                if (activeDurationSeconds == null) {
-                    throw new Exception("activeDurationSeconds is null");
-                }
-            } catch (Exception e) {
-                activeDurationSeconds = 5;
-                log.error("failed to get admin preference", e);
-            }
-            log.info("[CAPACITY] Scheduler: Current active customers expired seconds: {}", activeDurationSeconds);
+            Integer activeCustomerDurationSeconds = adminPreferenceService.getActiveCustomerDurationSeconds();
+
+            log.info("[CAPACITY] Scheduler: Current active customers expired seconds: {}", activeCustomerDurationSeconds);
 
             try {
                 //1. action_group:*:meta 전체 액션 그룹 메타 데이터 호출
@@ -62,22 +53,22 @@ public class ActiveUserCountScheduler extends AbstractScheduler {
                 //actionGroups 데이터를 통한 for 루프 시작
                 for(ActionGroup actionGroup : actionGroups) {
                     //삭제: expiredMinute 지난 고객 accesslog
-                    actionGroupAccessLogService.removeOverExpireMinuteCustomersFromActionGroupAccessLogBy(actionGroup.getId(), activeDurationSeconds);
+                    actionGroupAccessLogService.removeOverExpireMinuteCustomersFromActionGroupAccessLogBy(actionGroup.getId(), activeCustomerDurationSeconds);
 
-                    //집계/계산: {actionGroupId} 별 action_group:{actionGroupId}:accesslog 키의 활성 사용자 수(currentActiveCustomers)
-                    int maxActiveCustomers = actionGroup.getMaxActiveCustomers();
-                    int currentActiveCustomers = actionGroupAccessLogService.getCurrentActiveCustomersCountFromActionGroupAccessLogBy(actionGroup.getId());
-                    Long waitingQueueCount = actionGroupService.getWaitingQueueCountByActionGroupId(actionGroup.getId());
-                    int availableCapacity = Math.max(maxActiveCustomers - currentActiveCustomers, 0);
-
-                    //저장: key= action_group:{actionGroup.getId()}:status 의 value=availableCapacity, currentActiveCustomers의 json 양식
-                    ActionGroupStatus status = ActionGroupStatus.builder()
-                            .id(actionGroup.getId())
-                            .currentActiveCustomers((long) currentActiveCustomers)
-                            .availableCapacity((long) availableCapacity)
-                            .waitingQueueCount(waitingQueueCount)
-                            .build();
-                    actionGroupStatusService.saveActionGroupStatusBy(status);
+//                    //집계/계산: {actionGroupId} 별 action_group:{actionGroupId}:accesslog 키의 활성 사용자 수(currentActiveCustomers)
+//                    int maxActiveCustomers = actionGroup.getMaxActiveCustomers();
+//                    int currentActiveCustomers = actionGroupAccessLogService.getCurrentActiveCustomersCountFromActionGroupAccessLogBy(actionGroup.getId());
+//                    Long waitingQueueCount = actionGroupService.getWaitingQueueCountByActionGroupId(actionGroup.getId());
+//                    int availableCapacity = Math.max(maxActiveCustomers - currentActiveCustomers, 0);
+//
+//                    //저장: key= action_group:{actionGroup.getId()}:status 의 value=availableCapacity, currentActiveCustomers의 json 양식
+//                    ActionGroupStatus status = ActionGroupStatus.builder()
+//                            .id(actionGroup.getId())
+//                            .currentActiveCustomers((long) currentActiveCustomers)
+//                            .availableCapacity((long) availableCapacity)
+//                            .waitingQueueCount(waitingQueueCount)
+//                            .build();
+//                    actionGroupStatusService.saveActionGroupStatusBy(status);
 
                     log.info("[CAPACITY] Scheduler SAVED action_group:{}:status successful",actionGroup.getId());
                 }
@@ -89,7 +80,7 @@ public class ActiveUserCountScheduler extends AbstractScheduler {
             } catch (Exception e) {
                 log.error("[CAPACITY] Scheduler encountered an error", e);
             }
-        }, 0, 300, TimeUnit.MILLISECONDS);
+        }, 0, 500, TimeUnit.MILLISECONDS);
 
         log.info("[CAPACITY] Scheduler started");
     }

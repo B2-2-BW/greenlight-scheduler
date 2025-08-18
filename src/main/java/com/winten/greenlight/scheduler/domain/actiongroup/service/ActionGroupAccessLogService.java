@@ -36,11 +36,10 @@ public class ActionGroupAccessLogService {
     /**
      * action_group:{actionGroupId}:session 의 {activeDurationSeconds} 을/를 초과한 활성 사용자 제거
      *
-     * @param actionGroupId Action Group PK
      * @param activeDurationSeconds 해당 시각을 초과한 사용자를 제거하는 기준(초,sec)
      */
-    public void removeExpiredActionGroupSession(Long actionGroupId, Integer activeDurationSeconds) {
-        String key = redisKeyBuilder.actionGroupSession(actionGroupId);
+    public void removeExpiredActionGroupSession(Integer activeDurationSeconds) {
+        String key = redisKeyBuilder.actionGroupSession();
         if (activeDurationSeconds <= 0L) {
             throw new IllegalArgumentException("expireMinute must be positive.");
         }

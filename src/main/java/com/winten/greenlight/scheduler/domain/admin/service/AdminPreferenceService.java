@@ -18,4 +18,18 @@ public class AdminPreferenceService {
         //AdminPreferenceEntity 를 불러와준다.
         return adminPreferenceRepository.getAdminPreference();
     }
+
+    public int getActiveCustomerDurationSeconds() {
+        Integer activeCustomerDurationSeconds;
+        try {
+            activeCustomerDurationSeconds = this.getAdminPreference().getActiveCustomerDurationSeconds();
+            if (activeCustomerDurationSeconds == null) {
+                throw new Exception("activeCustomerDurationSeconds is null");
+            }
+        } catch (Exception e) {
+            activeCustomerDurationSeconds = 3;
+            log.error("failed to get admin preference", e);
+        }
+        return activeCustomerDurationSeconds;
+    }
 }

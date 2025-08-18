@@ -8,10 +8,14 @@ import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
 import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -20,6 +24,8 @@ public class ActionGroupService {
     private final ActionGroupRepository actionGroupRepository;
     private final RedisKeyBuilder redisKeyBuilder;
     private final ObjectMapper objectMapper;
+    // TODO Layer 침범 리팩토링 필요
+    private final RedisTemplate<String, String> redisTemplate;
 
     public List<ActionGroup> getAllActionGroupMeta() {
         String keys = redisKeyBuilder.allActionGroupMeta();
@@ -43,5 +49,16 @@ public class ActionGroupService {
             queueCount = 0L;
         }
         return queueCount;
+    }
+
+    public List<Long> getAllAccessLogOrdered(List<ActionGroup> actionGroupList) {
+        List<Object> activeUserCounts = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            for (ActionGroup actionGroup : actionGroupList) {
+                String key = redisKeyBuilder.actionGroupAccessLog(actionGroup.getId());
+                connection.zSetCommands().zCard(key.getBytes(StandardCharsets.UTF_8));
+            }
+            return null;
+        });
+        return activeUserCounts.stream().map(obj -> Long.parseLong(obj.toString())).collect(Collectors.toList());
     }
 }

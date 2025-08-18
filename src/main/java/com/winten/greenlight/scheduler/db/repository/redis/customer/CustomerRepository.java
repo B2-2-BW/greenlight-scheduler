@@ -55,7 +55,7 @@ public class CustomerRepository {
      * @param availableCapacity
      * @return
      */
-    public List<Customer> getTopNCustomersBy(Long actionGroupId, Long availableCapacity) {
+    public List<Customer> getTopNCustomersBy(Long actionGroupId, int availableCapacity) {
         //Set<ZSetOperations.TypedTuple<String>> tuples = zSetOperations.rangeWithScores(WaitingPhase.WAITING.queueName(), 0, eventBackPressure - 1);
         String redisKey = redisKeyBuilder.actionGroupQueue(actionGroupId, WaitStatus.WAITING);
         Set<ZSetOperations.TypedTuple<String>> tuples = zSetOperations.rangeWithScores(redisKey, 0, availableCapacity -1);

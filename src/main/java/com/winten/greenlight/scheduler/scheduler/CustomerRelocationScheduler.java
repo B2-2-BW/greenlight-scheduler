@@ -1,14 +1,17 @@
 package com.winten.greenlight.scheduler.scheduler;
 
-import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupStatus;
+import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
+import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupAccessLogService;
+import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupService;
 import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupStatusService;
+import com.winten.greenlight.scheduler.domain.admin.service.AdminPreferenceService;
 import com.winten.greenlight.scheduler.domain.customer.CustomerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * AbstractSchedulerComponent를 상속 한
@@ -19,8 +22,9 @@ import java.util.concurrent.*;
 @Component
 @RequiredArgsConstructor
 public class CustomerRelocationScheduler extends AbstractScheduler {
-    private final ActionGroupStatusService actionGroupStatusService;
+    private final ActionGroupService actionGroupService;
     private final CustomerService customerService;
+    private final AdminPreferenceService adminPreferenceService;
 
     /**
      * AbstractSchedulerComponent 의 registerScheduler 상세 구현
@@ -35,25 +39,27 @@ public class CustomerRelocationScheduler extends AbstractScheduler {
                 return;
             }
 
+            int activeCustomerDurationSeconds = adminPreferenceService.getActiveCustomerDurationSeconds();
+
             try {
                 log.info("[RELOCATION] Scheduler tick: starting");
+                List<ActionGroup> actionGroupList = actionGroupService.getAllActionGroupMeta();
+                List<Long> accessLogCountList = actionGroupService.getAllAccessLogOrdered(actionGroupList);
 
-                //1. action_group:*:status 전체 액션 그룹 status 데이터 호출
-                List<ActionGroupStatus> arrAllActionGroupStatus = actionGroupStatusService.getAllActionGroupStatus();
-                for(ActionGroupStatus actionGroupStatus : arrAllActionGroupStatus) {
-                    Long actionGroupId = actionGroupStatus.getId();
-                    Long availableCapacity = actionGroupStatus.getAvailableCapacity();
+                for (int i = 0; i < actionGroupList.size(); i++) {
+                    var actionGroup = actionGroupList.get(i);
+                    var accessLogCount = accessLogCountList.get(i);
+                    int averageActiveCustomers = Math.round((float) accessLogCount / activeCustomerDurationSeconds);
 
+                    int availableCapacity = Math.max(actionGroup.getMaxActiveCustomers() - averageActiveCustomers, 0);
                     // 2. 고객 재배치
-                    customerService.relocateCustomerBy(actionGroupId, availableCapacity);
+                    customerService.relocateCustomerBy(actionGroup.getId(), availableCapacity);
                 }
-
                 log.info("[RELOCATION] Scheduler Relocation successful");
-
             } catch (Exception e) {
                 log.error("[RELOCATION] Scheduler encountered an error", e);
             }
-        }, 0, 5, TimeUnit.SECONDS);
+        }, 0, 1, TimeUnit.SECONDS);
 
         log.info("[RELOCATION] Scheduler started");
     }
