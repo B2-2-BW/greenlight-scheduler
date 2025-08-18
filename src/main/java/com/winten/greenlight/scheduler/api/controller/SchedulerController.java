@@ -8,8 +8,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/scheduler")
+@RequestMapping("/schedulers")
 @RequiredArgsConstructor
 public class SchedulerController {
 
@@ -39,14 +41,9 @@ public class SchedulerController {
         );
     }
 
-    @GetMapping("/{schedulerType}/status")
-    public ResponseEntity<SchedulerResponse> status(@PathVariable SchedulerType schedulerType) {
-        SchedulerStatus status = schedulerService.getStatus(schedulerType);
-        return ResponseEntity.ok(
-                SchedulerResponse.builder()
-                        .status(status)
-                        .schedulerType(schedulerType)
-                        .build()
-        );
+    @GetMapping("/status")
+    public ResponseEntity<List<SchedulerResponse>> status(@RequestParam(required = false) SchedulerType schedulerType) {
+        List<SchedulerResponse> responseList = schedulerService.getStatusList(schedulerType);
+        return ResponseEntity.ok(responseList);
     }
 }
