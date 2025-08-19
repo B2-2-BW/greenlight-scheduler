@@ -33,7 +33,7 @@ public class ActionGroupAccessLogService {
     }
 
     public void removeExpiredActionGroupAccessLog(Long actionGroupId, int durationSeconds) {
-        String key = redisKeyBuilder.actionGroupRequestLog(actionGroupId);
+        String key = redisKeyBuilder.actionGroupAccessLog(actionGroupId);
         if (durationSeconds <= 0L) {
             throw new IllegalArgumentException("expireMinute must be positive.");
         }
