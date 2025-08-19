@@ -2,7 +2,6 @@ package com.winten.greenlight.scheduler.scheduler;
 
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
 import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupService;
-import com.winten.greenlight.scheduler.domain.admin.service.AdminPreferenceService;
 import com.winten.greenlight.scheduler.domain.customer.CustomerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +46,7 @@ public class CustomerRelocationScheduler extends AbstractScheduler {
                     var actionGroup = actionGroupList.get(i);
                     var requestPerSec = requestPerSecList.get(i);
 
-                    int availableCapacity = Math.round(actionGroup.getMaxActiveCustomers() - requestPerSec);
+                    int availableCapacity = Math.round(actionGroup.getMaxTrafficPerSecond() - requestPerSec);
                     availableCapacity = Math.max(availableCapacity, 0);
                     // 2. 고객 재배치
                     customerService.relocateCustomerBy(actionGroup.getId(), availableCapacity);
