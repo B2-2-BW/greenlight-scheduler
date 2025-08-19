@@ -40,16 +40,10 @@ public class CustomerRelocationScheduler extends AbstractScheduler {
             try {
                 log.info("[RELOCATION] Scheduler tick: starting");
                 List<ActionGroup> actionGroupList = actionGroupService.getAllActionGroupMeta();
-                List<Float> accessPerSecList = actionGroupService.getAllAccessPerSecOrdered(actionGroupList); // 10초 평균 초당 request 수 조회
-
                 for (int i = 0; i < actionGroupList.size(); i++) {
                     var actionGroup = actionGroupList.get(i);
-                    var accessPerSec = accessPerSecList.get(i);
-
-                    int availableCapacity = Math.round(actionGroup.getMaxTrafficPerSecond() - accessPerSec);
-                    availableCapacity = Math.max(availableCapacity, 0);
                     // 2. 고객 재배치
-                    customerService.relocateCustomerBy(actionGroup.getId(), availableCapacity);
+                    customerService.relocateCustomerBy(actionGroup.getId(), actionGroup.getMaxTrafficPerSecond());
                 }
                 log.info("[RELOCATION] Scheduler Relocation successful");
             } catch (Exception e) {
