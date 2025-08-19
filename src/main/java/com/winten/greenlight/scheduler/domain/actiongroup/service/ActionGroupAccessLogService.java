@@ -32,6 +32,18 @@ public class ActionGroupAccessLogService {
         actionGroupAccesslogRepository.removeZset(key, expireTime);
     }
 
+    public void removeExpiredActionGroupAccessLog(Long actionGroupId, int durationSeconds) {
+        String key = redisKeyBuilder.actionGroupRequestLog(actionGroupId);
+        if (durationSeconds <= 0L) {
+            throw new IllegalArgumentException("expireMinute must be positive.");
+        }
+
+        // 현재 시각 기준 N초 이전(ex: 1초 = 1000밀리초) 이전 timestamp 계산
+        long expireTime = System.currentTimeMillis() - (durationSeconds * 1000L);
+
+        actionGroupAccesslogRepository.removeZset(key, expireTime);
+    }
+
     /**
      * action_group:{actionGroupId}:session 의 {durationSeconds} 을/를 초과한 활성 사용자 제거
      *

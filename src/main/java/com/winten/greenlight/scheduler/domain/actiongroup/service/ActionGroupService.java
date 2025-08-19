@@ -51,10 +51,10 @@ public class ActionGroupService {
         return queueCount;
     }
 
-    public List<Float> getAllRequestPerSecOrdered(List<ActionGroup> actionGroupList) {
+    public List<Float> getAllAccessPerSecOrdered(List<ActionGroup> actionGroupList) {
         List<Object> activeUserCounts = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
             for (ActionGroup actionGroup : actionGroupList) {
-                String key = redisKeyBuilder.actionGroupRequestLog(actionGroup.getId());
+                String key = redisKeyBuilder.actionGroupAccessLog(actionGroup.getId());
                 connection.zSetCommands().zCard(key.getBytes(StandardCharsets.UTF_8));
             }
             return null;

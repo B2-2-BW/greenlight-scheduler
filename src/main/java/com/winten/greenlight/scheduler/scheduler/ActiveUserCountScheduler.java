@@ -46,6 +46,7 @@ public class ActiveUserCountScheduler extends AbstractScheduler {
                 for (ActionGroup actionGroup : actionGroups) {
                     //삭제: expiredMinute 지난 고객 accesslog
                     actionGroupAccessLogService.removeExpiredActionGroupRequestLog(actionGroup.getId(), 10); // 로그 유지시간 10초간
+                    actionGroupAccessLogService.removeExpiredActionGroupAccessLog(actionGroup.getId(), 10); // 로그 유지시간 10초간
                     log.info("[CAPACITY] Scheduler SAVED action_group:{}:status successful",actionGroup.getId());
                 }
                 if (actionGroups.isEmpty()) {
