@@ -1,9 +1,7 @@
 package com.winten.greenlight.scheduler.scheduler;
 
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
-import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupAccessLogService;
 import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupService;
-import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupStatusService;
 import com.winten.greenlight.scheduler.domain.admin.service.AdminPreferenceService;
 import com.winten.greenlight.scheduler.domain.customer.CustomerService;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 public class CustomerRelocationScheduler extends AbstractScheduler {
     private final ActionGroupService actionGroupService;
     private final CustomerService customerService;
-    private final AdminPreferenceService adminPreferenceService;
 
     /**
      * AbstractSchedulerComponent 의 registerScheduler 상세 구현
@@ -44,13 +41,14 @@ public class CustomerRelocationScheduler extends AbstractScheduler {
             try {
                 log.info("[RELOCATION] Scheduler tick: starting");
                 List<ActionGroup> actionGroupList = actionGroupService.getAllActionGroupMeta();
-                List<Integer> accessLogCountList = actionGroupService.getAllAccessLogOrdered(actionGroupList);
+                List<Float> requestPerSecList = actionGroupService.getAllRequestPerSecOrdered(actionGroupList); // 10초 평균 초당 request 수 조회
 
                 for (int i = 0; i < actionGroupList.size(); i++) {
                     var actionGroup = actionGroupList.get(i);
-                    var accessLogCount = accessLogCountList.get(i);
+                    var requestPerSec = requestPerSecList.get(i);
 
-                    int availableCapacity = Math.max(actionGroup.getMaxActiveCustomers() - accessLogCount, 0);
+                    int availableCapacity = Math.round(actionGroup.getMaxActiveCustomers() - requestPerSec);
+                    availableCapacity = Math.max(availableCapacity, 0);
                     // 2. 고객 재배치
                     customerService.relocateCustomerBy(actionGroup.getId(), availableCapacity);
                 }

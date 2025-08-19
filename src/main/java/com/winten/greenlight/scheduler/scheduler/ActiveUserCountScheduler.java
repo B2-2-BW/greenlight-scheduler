@@ -22,9 +22,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class ActiveUserCountScheduler extends AbstractScheduler {
     private final ActionGroupService actionGroupService;
-    private final ActionGroupStatusService actionGroupStatusService;
     private final ActionGroupAccessLogService actionGroupAccessLogService;
-    private final AdminPreferenceService adminPreferenceService;
 
     /**
      * AbstractSchedulerComponent 의 registerScheduler 상세 구현
@@ -33,7 +31,7 @@ public class ActiveUserCountScheduler extends AbstractScheduler {
     @Override
     protected void registerScheduler() {
         scheduledTask = scheduler.scheduleAtFixedRate(() -> {
-            if (shouldStop()){
+            if (shouldStop()) {
                 // 현재 상태 확인 후 신규 스케줄 미동작 처리
                 log.info("[CAPACITY] Scheduler tick: stopping");
                 //log.info("[CAPACITY] Scheduler tick: stopped",Sch);
@@ -41,38 +39,16 @@ public class ActiveUserCountScheduler extends AbstractScheduler {
             }
 
             log.info("[CAPACITY] Scheduler tick: starting");
-
-            //0.어드민 화면에 구현 된 사용자 경험 우선(3초)/서버 안정성 우선(5초) 별도 redis 키를 통해 가져옴
-            Integer activeCustomerDurationSeconds = adminPreferenceService.getActiveCustomerDurationSeconds();
-
-            log.info("[CAPACITY] Scheduler: Current active customers expired seconds: {}", activeCustomerDurationSeconds);
-
             try {
                 //1. action_group:*:meta 전체 액션 그룹 메타 데이터 호출
                 List<ActionGroup> actionGroups = actionGroupService.getAllActionGroupMeta();
                 //actionGroups 데이터를 통한 for 루프 시작
-                for(ActionGroup actionGroup : actionGroups) {
+                for (ActionGroup actionGroup : actionGroups) {
                     //삭제: expiredMinute 지난 고객 accesslog
-                    actionGroupAccessLogService.removeOverExpireMinuteCustomersFromActionGroupAccessLogBy(actionGroup.getId(), activeCustomerDurationSeconds);
-
-//                    //집계/계산: {actionGroupId} 별 action_group:{actionGroupId}:accesslog 키의 활성 사용자 수(currentActiveCustomers)
-//                    int maxActiveCustomers = actionGroup.getMaxActiveCustomers();
-//                    int currentActiveCustomers = actionGroupAccessLogService.getCurrentActiveCustomersCountFromActionGroupAccessLogBy(actionGroup.getId());
-//                    Long waitingQueueCount = actionGroupService.getWaitingQueueCountByActionGroupId(actionGroup.getId());
-//                    int availableCapacity = Math.max(maxActiveCustomers - currentActiveCustomers, 0);
-//
-//                    //저장: key= action_group:{actionGroup.getId()}:status 의 value=availableCapacity, currentActiveCustomers의 json 양식
-//                    ActionGroupStatus status = ActionGroupStatus.builder()
-//                            .id(actionGroup.getId())
-//                            .currentActiveCustomers((long) currentActiveCustomers)
-//                            .availableCapacity((long) availableCapacity)
-//                            .waitingQueueCount(waitingQueueCount)
-//                            .build();
-//                    actionGroupStatusService.saveActionGroupStatusBy(status);
-
+                    actionGroupAccessLogService.removeExpiredActionGroupRequestLog(actionGroup.getId(), 10); // 로그 유지시간 10초간
                     log.info("[CAPACITY] Scheduler SAVED action_group:{}:status successful",actionGroup.getId());
                 }
-                if(actionGroups.isEmpty()){
+                if (actionGroups.isEmpty()) {
                     log.info("[CAPACITY] Scheduler NO action groups are available");
                 } else {
                     log.info("[CAPACITY] Scheduler {} action groups successful",actionGroups.size());
@@ -80,7 +56,7 @@ public class ActiveUserCountScheduler extends AbstractScheduler {
             } catch (Exception e) {
                 log.error("[CAPACITY] Scheduler encountered an error", e);
             }
-        }, 0, 500, TimeUnit.MILLISECONDS);
+        }, 0, 1000, TimeUnit.MILLISECONDS);
 
         log.info("[CAPACITY] Scheduler started");
     }

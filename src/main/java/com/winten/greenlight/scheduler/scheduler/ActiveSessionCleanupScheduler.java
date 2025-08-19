@@ -19,9 +19,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 @RequiredArgsConstructor
 public class ActiveSessionCleanupScheduler extends AbstractScheduler {
-    private final ActionGroupService actionGroupService;
     private final ActionGroupAccessLogService actionGroupAccessLogService;
-    private final AdminPreferenceService adminPreferenceService;
     /**
      * AbstractSchedulerComponent 의 registerScheduler 상세 구현
      * ActiveSessionCleanupScheduler 역할을 수행
@@ -37,20 +35,9 @@ public class ActiveSessionCleanupScheduler extends AbstractScheduler {
             }
 
             log.info("[SESSION_CLEANUP] Scheduler tick: starting");
-            Integer sessionDurationSeconds;
-            try {
-                sessionDurationSeconds = adminPreferenceService.getAdminPreference().getSessionDurationSeconds();
-                if (sessionDurationSeconds == null) {
-                    throw new Exception("activeDurationSeconds is null");
-                }
-            } catch (Exception e) {
-                sessionDurationSeconds = 300;
-                log.error("failed to get admin preference", e);
-            }
-
             try {
                 //1. action_group:*:meta 전체 액션 그룹 메타 데이터 호출
-                actionGroupAccessLogService.removeExpiredActionGroupSession(sessionDurationSeconds);
+                actionGroupAccessLogService.removeExpiredActionGroupSession(300); // 세션 유지시간 300초
             } catch (Exception e) {
                 log.error("[SESSION_CLEANUP] Scheduler encountered an error", e);
             }

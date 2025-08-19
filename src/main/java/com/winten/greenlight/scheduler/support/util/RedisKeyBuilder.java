@@ -23,8 +23,8 @@ public class RedisKeyBuilder {
         return String.format("%s:action_group:%d:status", prefix, actionGroupId);
     }
 
-    public String actionGroupAccessLog(Long actionGroupId) {
-        return prefix + ":action_group:" + actionGroupId + ":accesslog";
+    public String actionGroupRequestLog(Long actionGroupId) {
+        return prefix + ":action_group:" + actionGroupId + ":request_log";
     }
 
     public String actionGroupQueue(Long actionGroupId, WaitStatus waitStatus) {

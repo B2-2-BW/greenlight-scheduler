@@ -15,38 +15,37 @@ public class ActionGroupAccessLogService {
     private final RedisKeyBuilder redisKeyBuilder;
 
     /**
-     * action_group:{actionGroupId}:accesslog 의 {activeDurationSeconds} 을/를 초과한 활성 사용자 제거
+     * action_group:{actionGroupId}:accesslog 의 {durationSeconds} 을/를 초과한 활성 사용자 제거
      *
      * @param actionGroupId Action Group PK
-     * @param activeDurationSeconds 해당 시각을 초과한 사용자를 제거하는 기준(초,sec)
+     * @param durationSeconds 해당 시각을 초과한 사용자를 제거하는 기준(초,sec)
      */
-    public void removeOverExpireMinuteCustomersFromActionGroupAccessLogBy(Long actionGroupId, Integer activeDurationSeconds) {
-        String key = redisKeyBuilder.actionGroupAccessLog(actionGroupId);
-        if (activeDurationSeconds <= 0L) {
+    public void removeExpiredActionGroupRequestLog(Long actionGroupId, int durationSeconds) {
+        String key = redisKeyBuilder.actionGroupRequestLog(actionGroupId);
+        if (durationSeconds <= 0L) {
             throw new IllegalArgumentException("expireMinute must be positive.");
         }
 
         // 현재 시각 기준 N초 이전(ex: 1초 = 1000밀리초) 이전 timestamp 계산
-        long currentTimeMillis = System.currentTimeMillis();
-        long expireTime = currentTimeMillis - (activeDurationSeconds * 1000L);
+        long expireTime = System.currentTimeMillis() - (durationSeconds * 1000L);
 
         actionGroupAccesslogRepository.removeZset(key, expireTime);
     }
 
     /**
-     * action_group:{actionGroupId}:session 의 {activeDurationSeconds} 을/를 초과한 활성 사용자 제거
+     * action_group:{actionGroupId}:session 의 {durationSeconds} 을/를 초과한 활성 사용자 제거
      *
-     * @param activeDurationSeconds 해당 시각을 초과한 사용자를 제거하는 기준(초,sec)
+     * @param durationSeconds 해당 시각을 초과한 사용자를 제거하는 기준(초,sec)
      */
-    public void removeExpiredActionGroupSession(Integer activeDurationSeconds) {
+    public void removeExpiredActionGroupSession(Integer durationSeconds) {
         String key = redisKeyBuilder.actionGroupSession();
-        if (activeDurationSeconds <= 0L) {
+        if (durationSeconds <= 0L) {
             throw new IllegalArgumentException("expireMinute must be positive.");
         }
 
         // 현재 시각 기준 N초 이전(ex: 1초 = 1000밀리초) 이전 timestamp 계산
         long currentTimeMillis = System.currentTimeMillis();
-        long expireTime = currentTimeMillis - (activeDurationSeconds * 1000L);
+        long expireTime = currentTimeMillis - (durationSeconds * 1000L);
 
         actionGroupAccesslogRepository.removeZset(key, expireTime);
     }
@@ -58,7 +57,7 @@ public class ActionGroupAccessLogService {
      * @return Integer Current Active Customers count 해당 Action Group ID 에 매핑되는 현재 활성 사용자 수
      */
     public Integer getCurrentActiveCustomersCountFromActionGroupAccessLogBy(Long actionGroupId) {
-        String key = redisKeyBuilder.actionGroupAccessLog(actionGroupId);
+        String key = redisKeyBuilder.actionGroupRequestLog(actionGroupId);
         if (actionGroupId <= 0L) {
             throw new IllegalArgumentException("actionGroupId must be positive.");
         }

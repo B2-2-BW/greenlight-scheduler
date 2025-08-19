@@ -51,14 +51,14 @@ public class ActionGroupService {
         return queueCount;
     }
 
-    public List<Integer> getAllAccessLogOrdered(List<ActionGroup> actionGroupList) {
+    public List<Float> getAllRequestPerSecOrdered(List<ActionGroup> actionGroupList) {
         List<Object> activeUserCounts = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
             for (ActionGroup actionGroup : actionGroupList) {
-                String key = redisKeyBuilder.actionGroupAccessLog(actionGroup.getId());
+                String key = redisKeyBuilder.actionGroupRequestLog(actionGroup.getId());
                 connection.zSetCommands().zCard(key.getBytes(StandardCharsets.UTF_8));
             }
             return null;
         });
-        return activeUserCounts.stream().map(obj -> Integer.parseInt(obj.toString())).collect(Collectors.toList());
+        return activeUserCounts.stream().map(obj -> Float.parseFloat(obj.toString()) / 10).collect(Collectors.toList());
     }
 }
