@@ -1,14 +1,10 @@
 package com.winten.greenlight.scheduler.scheduler;
 
-import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
-import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupAccessLogService;
-import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupService;
-import com.winten.greenlight.scheduler.domain.admin.service.AdminPreferenceService;
+import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupAccessLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**

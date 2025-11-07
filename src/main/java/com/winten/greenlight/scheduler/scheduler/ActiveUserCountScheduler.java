@@ -1,10 +1,8 @@
 package com.winten.greenlight.scheduler.scheduler;
 
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
-import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupAccessLogService;
-import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupService;
-import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupStatusService;
-import com.winten.greenlight.scheduler.domain.admin.service.AdminPreferenceService;
+import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupAccessLogService;
+import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -34,7 +32,6 @@ public class ActiveUserCountScheduler extends AbstractScheduler {
             if (shouldStop()) {
                 // 현재 상태 확인 후 신규 스케줄 미동작 처리
                 log.info("[CAPACITY] Scheduler tick: stopping");
-                //log.info("[CAPACITY] Scheduler tick: stopped",Sch);
                 return;
             }
 
@@ -47,12 +44,10 @@ public class ActiveUserCountScheduler extends AbstractScheduler {
                     //삭제: expiredMinute 지난 고객 accesslog
                     actionGroupAccessLogService.removeExpiredActionGroupRequestLog(actionGroup.getId(), 10); // 로그 유지시간 10초간
                     actionGroupAccessLogService.removeExpiredActionGroupAccessLog(actionGroup.getId(), 10); // 로그 유지시간 10초간
-                    log.info("[CAPACITY] Scheduler SAVED action_group:{}:status successful",actionGroup.getId());
+                    log.info("[CAPACITY] Scheduler removed expired logs successfully");
                 }
                 if (actionGroups.isEmpty()) {
                     log.info("[CAPACITY] Scheduler NO action groups are available");
-                } else {
-                    log.info("[CAPACITY] Scheduler {} action groups successful",actionGroups.size());
                 }
             } catch (Exception e) {
                 log.error("[CAPACITY] Scheduler encountered an error", e);

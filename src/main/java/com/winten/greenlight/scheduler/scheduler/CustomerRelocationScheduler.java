@@ -1,7 +1,7 @@
 package com.winten.greenlight.scheduler.scheduler;
 
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
-import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupService;
+import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupService;
 import com.winten.greenlight.scheduler.domain.customer.CustomerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

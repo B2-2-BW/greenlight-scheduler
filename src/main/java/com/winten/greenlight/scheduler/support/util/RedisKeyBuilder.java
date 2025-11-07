@@ -42,4 +42,15 @@ public class RedisKeyBuilder {
     public String actionGroupSession() {
         return prefix + ":session";
     }
+
+    public String actionEventStream() {
+        return prefix + ":infra:action_event:stream";
+    }
+    public String actionEventDlqStream() {
+        return prefix + ":infra:action_event:dlq";
+    }
+
+    public String actionGroupWaitStatusPattern() {
+        return prefix + ":action_group:*:queue:*";
+    }
 }
