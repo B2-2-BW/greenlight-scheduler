@@ -29,13 +29,14 @@ public class CustomerRelocationScheduler extends AbstractScheduler {
     @Override
     protected void registerScheduler() {
         scheduledTask = scheduler.scheduleAtFixedRate(() -> {
-            if (shouldStop()){
+            if (true) {
+                return;
+            }
+            if (shouldStop() ) {
                 // 현재 상태 확인 후 신규 스케줄 미동작 처리
                 log.info("[RELOCATION] Scheduler tick: stopping");
                 return;
             }
-
-//            int activeCustomerDurationSeconds = adminPreferenceService.getActiveCustomerDurationSeconds();
 
             try {
                 log.info("[RELOCATION] Scheduler tick: starting");
