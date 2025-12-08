@@ -1,7 +1,7 @@
 package com.winten.greenlight.scheduler.scheduler;
 
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
-import com.winten.greenlight.scheduler.domain.actiongroup.service.ActionGroupService;
+import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupService;
 import com.winten.greenlight.scheduler.domain.customer.CustomerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,13 +29,14 @@ public class CustomerRelocationScheduler extends AbstractScheduler {
     @Override
     protected void registerScheduler() {
         scheduledTask = scheduler.scheduleAtFixedRate(() -> {
-            if (shouldStop()){
+            if (true) {
+                return;
+            }
+            if (shouldStop() ) {
                 // 현재 상태 확인 후 신규 스케줄 미동작 처리
                 log.info("[RELOCATION] Scheduler tick: stopping");
                 return;
             }
-
-//            int activeCustomerDurationSeconds = adminPreferenceService.getActiveCustomerDurationSeconds();
 
             try {
                 log.info("[RELOCATION] Scheduler tick: starting");

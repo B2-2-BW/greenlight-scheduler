@@ -29,6 +29,12 @@ logging:
     root: INFO
     com.winten: DEBUG
 
+influxdb:
+  url: ${INFLUXDB_URL}
+  token: ${INFLUXDB_TOKEN}
+  org: ${INFLUXDB_ORG}
+  bucket: ${INFLUXDB_BUCKET}
+
 ---
 
 spring.config.activate.on-profile: local

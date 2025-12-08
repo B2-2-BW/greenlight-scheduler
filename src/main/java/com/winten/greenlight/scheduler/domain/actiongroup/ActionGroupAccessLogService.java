@@ -1,5 +1,5 @@
 
-package com.winten.greenlight.scheduler.domain.actiongroup.service;
+package com.winten.greenlight.scheduler.domain.actiongroup;
 
 import com.winten.greenlight.scheduler.db.repository.redis.actiongroup.repository.ActionGroupAccessLogRepository;
 import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;

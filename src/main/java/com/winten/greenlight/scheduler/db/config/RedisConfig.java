@@ -20,7 +20,7 @@ import java.time.Duration;
 
 @Configuration
 @RequiredArgsConstructor
-public class SchedulerRedisConfig {
+public class RedisConfig {
     private final ObjectMapper objectMapper;
 
     @Bean

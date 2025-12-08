@@ -1,10 +1,9 @@
 
-package com.winten.greenlight.scheduler.domain.actiongroup.service;
+package com.winten.greenlight.scheduler.domain.actiongroup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.winten.greenlight.scheduler.db.repository.redis.actiongroup.ActionGroupEntity;
 import com.winten.greenlight.scheduler.db.repository.redis.actiongroup.repository.ActionGroupRepository;
-import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
 import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
