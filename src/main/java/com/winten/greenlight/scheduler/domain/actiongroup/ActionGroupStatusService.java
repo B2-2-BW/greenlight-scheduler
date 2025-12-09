@@ -2,7 +2,6 @@
 package com.winten.greenlight.scheduler.domain.actiongroup;
 
 import com.influxdb.client.WriteApi;
-import com.influxdb.client.domain.WritePrecision;
 import com.influxdb.client.write.Point;
 import com.winten.greenlight.scheduler.domain.customer.WaitStatus;
 import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
@@ -61,7 +60,7 @@ public class ActionGroupStatusService {
                         }
                     } catch (NumberFormatException e) {
                         // queueId가 숫자가 아닌 경우 등 예외 상황을 처리합니다.
-                        System.err.println("Invalid key format: " + key);
+                        log.error("Invalid key format: " + key);
                     }
                 }
             }
