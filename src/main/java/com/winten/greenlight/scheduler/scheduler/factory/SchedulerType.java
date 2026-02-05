@@ -15,6 +15,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum SchedulerType {
     RELOCATION, /* 고객 이동 스케쥴러 */
+    WAITING_TO_READY, /* 고객 입장처리 스케쥴러 (v2) */
     CAPACITY, /* 대기열 활성사용자수 계산 스케쥴러 */
     CLEANUP_SESSION, /* session 정리 스케쥴러 */
     REDIS_CLEANUP, /* Redis stream 정리 스케쥴러 */

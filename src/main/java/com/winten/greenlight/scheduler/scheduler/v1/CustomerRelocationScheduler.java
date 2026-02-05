@@ -1,11 +1,13 @@
-package com.winten.greenlight.scheduler.scheduler;
+package com.winten.greenlight.scheduler.scheduler.v1;
 
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupService;
 import com.winten.greenlight.scheduler.domain.customer.CustomerService;
+import com.winten.greenlight.scheduler.scheduler.BaseScheduler;
+import com.winten.greenlight.scheduler.scheduler.factory.SchedulerRegistry;
+import com.winten.greenlight.scheduler.scheduler.factory.SchedulerType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -13,12 +15,12 @@ import java.util.concurrent.TimeUnit;
 /**
  * AbstractSchedulerComponent를 상속 한
  * CustomerRelocationSchedulerComponent
- * @see AbstractScheduler
+ * @see BaseScheduler
  */
 @Slf4j
-@Component
+//@Component
 @RequiredArgsConstructor
-public class CustomerRelocationScheduler extends AbstractScheduler {
+public class CustomerRelocationScheduler extends BaseScheduler {
     private final ActionGroupService actionGroupService;
     private final CustomerService customerService;
 
@@ -28,6 +30,8 @@ public class CustomerRelocationScheduler extends AbstractScheduler {
      */
     @Override
     protected void registerScheduler() {
+        SchedulerRegistry.register(SchedulerType.RELOCATION, this);
+
         scheduledTask = scheduler.scheduleAtFixedRate(() -> {
             if (shouldStop() ) {
                 // 현재 상태 확인 후 신규 스케줄 미동작 처리

@@ -13,7 +13,7 @@ import java.util.concurrent.ScheduledFuture;
  * Base Scheduler Component
  */
 @Slf4j
-public abstract class AbstractScheduler {
+public abstract class BaseScheduler {
     protected ScheduledFuture<?> scheduledTask;
     protected final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     /**

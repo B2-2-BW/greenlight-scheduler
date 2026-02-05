@@ -3,7 +3,7 @@ package com.winten.greenlight.scheduler.db.repository.redis.customer;
 import com.winten.greenlight.scheduler.domain.customer.Customer;
 import com.winten.greenlight.scheduler.domain.customer.WaitStatus;
 import com.winten.greenlight.scheduler.support.error.CoreException;
-import com.winten.greenlight.scheduler.support.error.ErrorType;
+import com.winten.greenlight.scheduler.support.error.ErrorCode;
 import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -35,7 +35,7 @@ public class CustomerRepository {
 
         if (Boolean.TRUE.equals(result)) {
         } else {
-            throw CoreException.of(ErrorType.REDIS_ERROR, "Customer Not Saved");
+            throw CoreException.of(ErrorCode.REDIS_ERROR, "Customer Not Saved");
         }
     }
 

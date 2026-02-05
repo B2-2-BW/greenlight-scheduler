@@ -1,10 +1,9 @@
-package com.winten.greenlight.scheduler.db.repository.redis.actiongroup.repository;
+package com.winten.greenlight.scheduler.db.repository.redis.actiongroup;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.winten.greenlight.scheduler.db.repository.redis.actiongroup.ActionGroupEntity;
+import tools.jackson.databind.json.JsonMapper;
 import com.winten.greenlight.scheduler.domain.customer.WaitStatus;
 import com.winten.greenlight.scheduler.support.error.CoreException;
-import com.winten.greenlight.scheduler.support.error.ErrorType;
+import com.winten.greenlight.scheduler.support.error.ErrorCode;
 import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +18,7 @@ import java.util.*;
 public class ActionGroupRepository {
     private final RedisTemplate<String, String> stringRedisTemplate;
     private final RedisTemplate<String, Object> jsonRedisTemplate;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
     private final RedisKeyBuilder redisKeyBuilder;
 
     /**
@@ -38,11 +37,11 @@ public class ActionGroupRepository {
         for(String key : keys){
             try {
                 Map<Object, Object> map = jsonRedisTemplate.opsForHash().entries(key);
-                ActionGroupEntity actionGroupEntity = objectMapper.convertValue(map, ActionGroupEntity.class);
+                ActionGroupEntity actionGroupEntity = jsonMapper.convertValue(map, ActionGroupEntity.class);
                 result.add(actionGroupEntity);
             } catch (Exception e) {
                 log.error("Redis 오류 발생: {}", e.getMessage(), e);
-                throw CoreException.of(ErrorType.REDIS_ERROR, "Redis 접근 오류: " + e.getMessage());
+                throw CoreException.of(ErrorCode.REDIS_ERROR, "Redis 접근 오류: " + e.getMessage());
             }
         }
 

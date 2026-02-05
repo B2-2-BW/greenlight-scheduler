@@ -1,9 +1,9 @@
 
 package com.winten.greenlight.scheduler.domain.actiongroup;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.winten.greenlight.scheduler.db.repository.redis.actiongroup.ActionGroupEntity;
-import com.winten.greenlight.scheduler.db.repository.redis.actiongroup.repository.ActionGroupRepository;
+import com.winten.greenlight.scheduler.db.repository.redis.actiongroup.ActionGroupRepository;
 import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public class ActionGroupService {
     private final ActionGroupRepository actionGroupRepository;
     private final RedisKeyBuilder redisKeyBuilder;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
     // TODO Layer 침범 리팩토링 필요
     private final RedisTemplate<String, String> redisTemplate;
 
@@ -35,7 +35,7 @@ public class ActionGroupService {
         //ActionGroupEntity 형식의 list 를 ActionGroup 으로 매핑
         List<ActionGroup> actionGroups = new ArrayList<>(actionGroupEntities.size());
         for (ActionGroupEntity actionGroupEntity : actionGroupEntities) {
-            ActionGroup actionGroup = objectMapper.convertValue(actionGroupEntity, ActionGroup.class);
+            ActionGroup actionGroup = jsonMapper.convertValue(actionGroupEntity, ActionGroup.class);
             actionGroups.add(actionGroup);
         }
 

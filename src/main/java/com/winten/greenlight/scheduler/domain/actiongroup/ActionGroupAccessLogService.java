@@ -1,7 +1,7 @@
 
 package com.winten.greenlight.scheduler.domain.actiongroup;
 
-import com.winten.greenlight.scheduler.db.repository.redis.actiongroup.repository.ActionGroupAccessLogRepository;
+import com.winten.greenlight.scheduler.db.repository.redis.actiongroup.ActionGroupAccessLogRepository;
 import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
