@@ -22,6 +22,22 @@ springdoc:
 spring:
   config:
     import: optional:file:.env[.properties]
+  data:
+    redis:
+
+      host: ${REDIS_DEV_HOST:127.0.0.1}
+      port: ${REDIS_DEV_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      cluster:
+        max-redirects: 5
+        nodes: ${REDIS_CLUSTER_NODES:}
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED:false}
+      connect-timeout: 3s
+      timeout: 5s
+      lettuce:
+        pool:
+          time-between-eviction-runs: 300000
 
 logging:
   config: classpath:logback/logback-${spring.profiles.active}.xml
@@ -42,39 +58,14 @@ redis:
 ---
 
 spring.config.activate.on-profile: local
-spring:
-  data:
-    redis:
-      host: ${REDIS_DEV_HOST}
-      port: ${REDIS_DEV_PORT}
-      password: ${REDIS_PASSWORD}
 
 ---
 
 spring.config.activate.on-profile: dev
-spring:
-  data:
-    redis:
-      host: ${REDIS_DEV_HOST}
-      port: ${REDIS_DEV_PORT}
-      password: ${REDIS_PASSWORD}
 
 ---
 
 spring.config.activate.on-profile: live
-spring:
-  data:
-    redis:
-      cluster:
-        max-redirects: 3
-        nodes:
-          - ${REDIS_CLUSTER_MASTER_NODE_1}
-          - ${REDIS_CLUSTER_MASTER_NODE_2}
-          - ${REDIS_CLUSTER_MASTER_NODE_3}
-          - ${REDIS_CLUSTER_WORKER_NODE_1}
-          - ${REDIS_CLUSTER_WORKER_NODE_2}
-          - ${REDIS_CLUSTER_WORKER_NODE_3}
-      password: ${REDIS_PASSWORD}
 
 logging:
   level:
