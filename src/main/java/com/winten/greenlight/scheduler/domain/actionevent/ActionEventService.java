@@ -1,6 +1,5 @@
 package com.winten.greenlight.scheduler.domain.actionevent;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

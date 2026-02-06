@@ -1,7 +1,7 @@
 
 package com.winten.greenlight.scheduler.domain.admin;
 
-import com.winten.greenlight.scheduler.db.repository.redis.admin.repository.AdminPreferenceRepository;
+import com.winten.greenlight.scheduler.db.repository.redis.admin.AdminPreferenceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

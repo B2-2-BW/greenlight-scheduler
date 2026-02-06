@@ -2,7 +2,7 @@ package com.winten.greenlight.scheduler.api;
 
 import com.winten.greenlight.scheduler.support.error.CoreException;
 import com.winten.greenlight.scheduler.support.error.ErrorResponse;
-import com.winten.greenlight.scheduler.support.error.ErrorType;
+import com.winten.greenlight.scheduler.support.error.ErrorCode;
 import io.lettuce.core.RedisCommandTimeoutException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +26,7 @@ public class ApiControllerAdvice {
 
     @ExceptionHandler(CoreException.class)
     public ResponseEntity<ErrorResponse> handleCoreException(CoreException ex) {
-        return ResponseEntity.status(ex.getErrorType().getStatus()).body(new ErrorResponse(ex));
+        return ResponseEntity.status(ex.getErrorCode().getStatus()).body(new ErrorResponse(ex));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -35,13 +35,13 @@ public class ApiControllerAdvice {
         for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
             errors.put(fieldError.getField(), fieldError.getDefaultMessage());
         }
-        var coreException = CoreException.of(ErrorType.INVALID_DATA, errors);
+        var coreException = CoreException.of(ErrorCode.INVALID_DATA, errors);
         return handleCoreException(coreException);
     }
 
     @ExceptionHandler(RedisCommandTimeoutException.class)
     public Mono<ResponseEntity<ErrorResponse>> redisCommandTimeoutExceptionHandler(RedisCommandTimeoutException ex) {
         lettuceConnectionFactory.resetConnection();
-        throw CoreException.of(ErrorType.REDIS_ERROR, "redis command timeout 발생. 재연결 시도");
+        throw CoreException.of(ErrorCode.REDIS_ERROR, "redis command timeout 발생. 재연결 시도");
     }
 }

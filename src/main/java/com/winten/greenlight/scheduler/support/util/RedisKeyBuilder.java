@@ -53,4 +53,12 @@ public class RedisKeyBuilder {
     public String actionGroupWaitStatusPattern() {
         return prefix + ":action_group:*:queue:*";
     }
+
+    public String allRoomMeta()  {
+        return prefix + ":room:*:meta";
+    }
+
+    public String roomQueue(String roomId, WaitStatus waitStatus) {
+        return prefix + ":room:" + roomId + ":queue:" + waitStatus;
+    }
 }

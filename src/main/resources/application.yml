@@ -1,11 +1,8 @@
+spring.application.name: greenlight-scheduler
+spring.profiles.active: local
+
 server:
   port: 27070
-
-spring:
-  application:
-    name: greenlight-scheduler
-  profiles:
-    active: local
   url: ${SERVER_URL}
 
 springdoc:
@@ -21,7 +18,26 @@ springdoc:
   default-produces-media-type: application/json
   paths-to-match:
     - /**
-    -
+
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  data:
+    redis:
+
+      host: ${REDIS_DEV_HOST:127.0.0.1}
+      port: ${REDIS_DEV_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      cluster:
+        max-redirects: 5
+        nodes: ${REDIS_CLUSTER_NODES:}
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED:false}
+      connect-timeout: 3s
+      timeout: 5s
+      lettuce:
+        pool:
+          time-between-eviction-runs: 300000
 
 logging:
   config: classpath:logback/logback-${spring.profiles.active}.xml
@@ -35,56 +51,21 @@ influxdb:
   org: ${INFLUXDB_ORG}
   bucket: ${INFLUXDB_BUCKET}
 
+redis:
+  key-prefix: ${REDIS_KEY_PREFIX}
+  connection-type: ${REDIS_CONNECTION_TYPE:standalone}
+
 ---
 
 spring.config.activate.on-profile: local
-spring:
-  data:
-    redis:
-      cluster:
-        nodes:
-          - ${REDIS_CLUSTER_MASTER_NODE_1}
-          - ${REDIS_CLUSTER_MASTER_NODE_2}
-          - ${REDIS_CLUSTER_MASTER_NODE_3}
-          - ${REDIS_CLUSTER_WORKER_NODE_1}
-          - ${REDIS_CLUSTER_WORKER_NODE_2}
-          - ${REDIS_CLUSTER_WORKER_NODE_3}
-      password: ${REDIS_PASSWORD}
-      key-prefix: ${REDIS_KEY_PREFIX}
 
 ---
 
 spring.config.activate.on-profile: dev
-spring:
-  data:
-    redis:
-      cluster:
-        nodes:
-          - ${REDIS_CLUSTER_MASTER_NODE_1}
-          - ${REDIS_CLUSTER_MASTER_NODE_2}
-          - ${REDIS_CLUSTER_MASTER_NODE_3}
-          - ${REDIS_CLUSTER_WORKER_NODE_1}
-          - ${REDIS_CLUSTER_WORKER_NODE_2}
-          - ${REDIS_CLUSTER_WORKER_NODE_3}
-      password: ${REDIS_PASSWORD}
-      key-prefix: ${REDIS_KEY_PREFIX}
 
 ---
 
 spring.config.activate.on-profile: live
-spring:
-  data:
-    redis:
-      cluster:
-        nodes:
-          - ${REDIS_CLUSTER_MASTER_NODE_1}
-          - ${REDIS_CLUSTER_MASTER_NODE_2}
-          - ${REDIS_CLUSTER_MASTER_NODE_3}
-          - ${REDIS_CLUSTER_WORKER_NODE_1}
-          - ${REDIS_CLUSTER_WORKER_NODE_2}
-          - ${REDIS_CLUSTER_WORKER_NODE_3}
-      password: ${REDIS_PASSWORD}
-      key-prefix: ${REDIS_KEY_PREFIX}
 
 logging:
   level:

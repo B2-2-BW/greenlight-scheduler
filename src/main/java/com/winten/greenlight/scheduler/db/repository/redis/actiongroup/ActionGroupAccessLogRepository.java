@@ -1,4 +1,4 @@
-package com.winten.greenlight.scheduler.db.repository.redis.actiongroup.repository;
+package com.winten.greenlight.scheduler.db.repository.redis.actiongroup;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
