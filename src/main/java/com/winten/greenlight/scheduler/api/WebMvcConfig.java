@@ -1,6 +1,6 @@
 package com.winten.greenlight.scheduler.api;
 
-import com.winten.greenlight.scheduler.config.typehandler.SchedulerTypeConverter;
+import com.winten.greenlight.scheduler.config.typehandler.SchedulerCodeConverter;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -18,6 +18,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addFormatters(FormatterRegistry registry) {
-        registry.addConverter(new SchedulerTypeConverter());
+        registry.addConverter(new SchedulerCodeConverter());
     }
 }

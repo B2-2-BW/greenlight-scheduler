@@ -61,4 +61,10 @@ public class RedisKeyBuilder {
     public String roomQueue(String roomId, WaitStatus waitStatus) {
         return prefix + ":room:" + roomId + ":queue:" + waitStatus;
     }
+    public String roomHeartbeat(String roomId, WaitStatus heartbeatType) {
+        return prefix + ":room:" + roomId + ":heartbeat:" + heartbeatType;
+    }
+    public String roomMetricOutflow(String roomId) {
+        return prefix + ":room:" + roomId + ":metric:outflow";
+    }
 }

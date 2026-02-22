@@ -1,9 +1,7 @@
 package com.winten.greenlight.scheduler.scheduler.v1;
 
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupAccessLogService;
-import com.winten.greenlight.scheduler.scheduler.BaseScheduler;
-import com.winten.greenlight.scheduler.scheduler.factory.SchedulerRegistry;
-import com.winten.greenlight.scheduler.scheduler.factory.SchedulerType;
+import com.winten.greenlight.scheduler.scheduler.AbstractScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -11,12 +9,12 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 사용자 세션을 주기적으로 정리하는 스케쥴러
- * @see BaseScheduler
+ * @see AbstractScheduler
  */
 @Slf4j
 //@Component
 @RequiredArgsConstructor
-public class ActiveSessionCleanupScheduler extends BaseScheduler {
+public class ActiveSessionCleanupScheduler extends AbstractScheduler {
     private final ActionGroupAccessLogService actionGroupAccessLogService;
     /**
      * AbstractSchedulerComponent 의 registerScheduler 상세 구현
@@ -24,7 +22,6 @@ public class ActiveSessionCleanupScheduler extends BaseScheduler {
      */
     @Override
     protected void registerScheduler() {
-        SchedulerRegistry.register(SchedulerType.CLEANUP_SESSION, this);
 
         scheduledTask = scheduler.scheduleAtFixedRate(() -> {
             if (shouldStop()){

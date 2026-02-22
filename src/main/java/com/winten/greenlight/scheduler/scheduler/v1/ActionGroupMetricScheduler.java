@@ -1,9 +1,7 @@
 package com.winten.greenlight.scheduler.scheduler.v1;
 
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupStatusService;
-import com.winten.greenlight.scheduler.scheduler.BaseScheduler;
-import com.winten.greenlight.scheduler.scheduler.factory.SchedulerRegistry;
-import com.winten.greenlight.scheduler.scheduler.factory.SchedulerType;
+import com.winten.greenlight.scheduler.scheduler.AbstractScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -12,13 +10,12 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 //@Component
 @RequiredArgsConstructor
-public class ActionGroupMetricScheduler extends BaseScheduler {
+public class ActionGroupMetricScheduler extends AbstractScheduler {
 
     private final ActionGroupStatusService actionGroupStatusService;
 
     @Override
     protected void registerScheduler() {
-        SchedulerRegistry.register(SchedulerType.METRIC, this);
 
         scheduledTask = scheduler.scheduleAtFixedRate(() -> {
             if (shouldStop()){

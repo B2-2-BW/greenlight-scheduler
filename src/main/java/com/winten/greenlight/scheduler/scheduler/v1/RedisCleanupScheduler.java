@@ -1,9 +1,7 @@
 package com.winten.greenlight.scheduler.scheduler.v1;
 
 import com.winten.greenlight.scheduler.domain.actionevent.ActionEventService;
-import com.winten.greenlight.scheduler.scheduler.BaseScheduler;
-import com.winten.greenlight.scheduler.scheduler.factory.SchedulerRegistry;
-import com.winten.greenlight.scheduler.scheduler.factory.SchedulerType;
+import com.winten.greenlight.scheduler.scheduler.AbstractScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -12,17 +10,16 @@ import java.util.concurrent.TimeUnit;
 /**
  * AbstractSchedulerComponent를 상속 한
  * CustomerRelocationSchedulerComponent
- * @see BaseScheduler
+ * @see AbstractScheduler
  */
 @Slf4j
 //@Component
 @RequiredArgsConstructor
-public class RedisCleanupScheduler extends BaseScheduler {
+public class RedisCleanupScheduler extends AbstractScheduler {
     private final ActionEventService actionEventService;
 
     @Override
     protected void registerScheduler() {
-        SchedulerRegistry.register(SchedulerType.REDIS_CLEANUP, this);
 
         scheduledTask = scheduler.scheduleAtFixedRate(() -> {
             if (shouldStop()){
