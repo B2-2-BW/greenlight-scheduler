@@ -22,8 +22,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1'
     implementation 'com.influxdb:influxdb-client-java:7.3.0'
-    implementation 'org.projectlombok:lombok'
+    implementation 'org.mapstruct:mapstruct:1.6.3'
+
+    compileOnly 'org.projectlombok:lombok'
+
     annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor "org.mapstruct:mapstruct-processor:1.6.3"
 }
 
 tasks.named('test') {

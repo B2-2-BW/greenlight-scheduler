@@ -1,28 +1,33 @@
-package com.winten.greenlight.scheduler.scheduler.factory;
+package com.winten.greenlight.scheduler.scheduler.v2;
 
-import com.winten.greenlight.scheduler.scheduler.BaseScheduler;
+import com.winten.greenlight.scheduler.domain.scheduler.SchedulerCode;
 import com.winten.greenlight.scheduler.support.error.CoreException;
 import com.winten.greenlight.scheduler.support.error.ErrorCode;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 public class SchedulerRegistry {
-    private static final Map<SchedulerType, BaseScheduler> registry = new HashMap<>();
+    private static final Map<SchedulerCode, BaseScheduler> registry = new HashMap<>();
 
-    public static void register(SchedulerType type, BaseScheduler scheduler) {
+    public static void register(SchedulerCode type, BaseScheduler scheduler) {
         Objects.requireNonNull(type, "type must not be null");
         Objects.requireNonNull(scheduler, "scheduler must not be null");
         registry.put(type, scheduler);
     }
 
-    public static BaseScheduler get(SchedulerType type) {
+    public static BaseScheduler get(SchedulerCode type) {
         Objects.requireNonNull(type, "type must not be null");
         BaseScheduler scheduler = registry.get(type);
         if (scheduler == null) {
             throw CoreException.of(ErrorCode.UNKNOWN_SCHEDULER_TYPE, "No scheduler registered for type: " + type);
         }
         return scheduler;
+    }
+
+    public static List<BaseScheduler> getAll() {
+        return registry.values().stream().toList();
     }
 }

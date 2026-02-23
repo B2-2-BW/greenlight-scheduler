@@ -3,9 +3,7 @@ package com.winten.greenlight.scheduler.scheduler.v1;
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroup;
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupAccessLogService;
 import com.winten.greenlight.scheduler.domain.actiongroup.ActionGroupService;
-import com.winten.greenlight.scheduler.scheduler.BaseScheduler;
-import com.winten.greenlight.scheduler.scheduler.factory.SchedulerRegistry;
-import com.winten.greenlight.scheduler.scheduler.factory.SchedulerType;
+import com.winten.greenlight.scheduler.scheduler.AbstractScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -15,12 +13,12 @@ import java.util.concurrent.TimeUnit;
 /**
  * AbstractSchedulerComponent를 상속 한
  * ActionGroupActiveUserSchedulerComponent
- * @see BaseScheduler
+ * @see AbstractScheduler
  */
 @Slf4j
 //@Component
 @RequiredArgsConstructor
-public class ActiveUserCountScheduler extends BaseScheduler {
+public class ActiveUserCountScheduler extends AbstractScheduler {
     private final ActionGroupService actionGroupService;
     private final ActionGroupAccessLogService actionGroupAccessLogService;
 
@@ -30,7 +28,6 @@ public class ActiveUserCountScheduler extends BaseScheduler {
      */
     @Override
     protected void registerScheduler() {
-        SchedulerRegistry.register(SchedulerType.CAPACITY, this);
 
         scheduledTask = scheduler.scheduleAtFixedRate(() -> {
             if (shouldStop()) {

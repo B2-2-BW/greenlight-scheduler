@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Repository;
 import tools.jackson.core.JacksonException;
@@ -51,7 +52,7 @@ public class RoomRepository {
     }
 
     public long countEnteredCustomersByRoomId(String roomId) {
-        var key = redisKeyBuilder.roomQueue(roomId, WaitStatus.ENTERED);
+        var key = redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.ENTERED);
         Long count = redisTemplate.opsForZSet().size(key);
         return count != null ? count : 0L;
     }
@@ -59,6 +60,7 @@ public class RoomRepository {
     public Long moveTicketsToEntered(String roomId, long count) {
         String waitingKey = redisKeyBuilder.roomQueue(roomId, WaitStatus.WAITING);
         String enteredKey = redisKeyBuilder.roomQueue(roomId, WaitStatus.ENTERED);
+        String enteredHeartbeatKey = redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.ENTERED);
 
         // Lua Script: 순서 보장 없이 동일한 Timestamp로 Bulk Insert
         var redisScript = getMoveTicketRedisScript();
@@ -68,27 +70,21 @@ public class RoomRepository {
 
         return redisTemplate.execute(
                 redisScript,
-                List.of(waitingKey, enteredKey), // KEYS[1], KEYS[2]
+                List.of(waitingKey, enteredKey, enteredHeartbeatKey), // KEYS[1], KEYS[2], KEYS[3]
                 String.valueOf(count),           // ARGV[1]
                 nowScore                         // ARGV[2]
         );
     }
 
-    private static @NonNull DefaultRedisScript<Long> getMoveTicketRedisScript() {
+    private @NonNull DefaultRedisScript<Long> getMoveTicketRedisScript() {
         String script = """
 local members = redis.call('ZRANGE', KEYS[1], 0, ARGV[1] - 1)
 if #members > 0 then
     redis.call('ZREM', KEYS[1], unpack(members))
-    
-    local zadd_args = {}
-    local score = ARGV[2]
-    
     for _, member in ipairs(members) do
-        table.insert(zadd_args, score)
-        table.insert(zadd_args, member)
+        redis.call('ZADD', KEYS[2], ARGV[2], member)
+        redis.call('ZADD', KEYS[3], ARGV[2], member)
     end
-    
-    redis.call('ZADD', KEYS[2], unpack(zadd_args))
     return #members
 else
     return 0
@@ -106,5 +102,38 @@ end
         if (count != null && count > 0) {
             log.info("[removeEnteredQueueRanged] RoomId: {}, {}명 삭제.", roomId, count);
         }
+    }
+
+    private @NonNull DefaultRedisScript<Long> getRemoveDeadHeartbeatsRedisScript() {
+        String script = """
+local deadHeartbeats = redis.call('ZRANGEBYSCORE', KEYS[1], 0, ARGV[1])
+if #deadHeartbeats == 0 then
+    return 0
+end
+redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, ARGV[1])
+for i, originalId in ipairs(deadHeartbeats) do
+    redis.call('ZADD', KEYS[2], ARGV[2], originalId .. ':' .. ARGV[2])
+end
+return #deadHeartbeats
+        """;
+
+        var redisScript = new DefaultRedisScript<Long>();
+        redisScript.setScriptText(script);
+        redisScript.setResultType(Long.class);
+        return redisScript;
+    }
+
+    public void removeDeadHeartbeats(String roomId, long now, double maxScore) {
+        String deadHeartbeatKey = redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.ENTERED);
+        String outflowKey = redisKeyBuilder.roomMetricOutflow(roomId);
+
+        List<String> keys = List.of(deadHeartbeatKey, outflowKey);
+
+        redisTemplate.execute(
+                getRemoveDeadHeartbeatsRedisScript(),
+                keys,
+                String.valueOf(maxScore),
+                String.valueOf(now)
+        );
     }
 }
