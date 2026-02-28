@@ -11,13 +11,15 @@ import org.springframework.context.annotation.Configuration;
 public class SchedulerConfig {
 
     private final RoomService roomService;
+    private final SchedulerDelayProperties delayProperties;
 
     @Bean(initMethod = "start", destroyMethod = "stop")
-    public BaseScheduler outflowScheduler() {
+    public BaseScheduler metricScheduler() {
         return new BaseScheduler(
-                SchedulerCode.OUTFLOW,
-                5, // 5초 딜레이
-                roomService::removeDeadHeartbeats
+                SchedulerCode.METRIC,
+                delayProperties,
+                roomService::recordRoomMetric,
+                SchedulePolicy.FIXED_RATE
         );
     }
 
@@ -25,8 +27,9 @@ public class SchedulerConfig {
     public BaseScheduler waitingToReadyScheduler() {
         return new BaseScheduler(
                 SchedulerCode.WAITING_TO_READY,
-                5,
-                roomService::relocateCustomers
+                delayProperties,
+                roomService::relocateCustomers,
+                SchedulePolicy.FIXED_DELAY
         );
     }
 }

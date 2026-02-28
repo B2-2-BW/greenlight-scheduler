@@ -15,8 +15,11 @@ public class BaseScheduler {
     @Getter
     private final SchedulerCode schedulerCode;
 
-    @Getter
-    private final long delaySeconds;
+    private final SchedulerDelayProperties delayProperties;
+
+    private final Runnable task;
+
+    private final AtomicBoolean isRunning = new AtomicBoolean(false);
 
     @Getter @Setter
     private String name;
@@ -24,25 +27,30 @@ public class BaseScheduler {
     @Getter @Setter
     private String description;
 
-    private final Runnable task;
     private ScheduledExecutorService executorService;
     private ScheduledFuture<?> scheduledTask;
-    private final AtomicBoolean isRunning = new AtomicBoolean(false);
     private int errorCount;
+    private SchedulePolicy schedulePolicy;
 
     /**
      * @param schedulerCode 스케줄러 타입 (Registry 등록용)
-     * @param delaySeconds  고정 딜레이 (초)
+     * @param delayProperties   딜레이 설정값 (초)
      * @param task          실행할 비즈니스 로직
      */
-    public BaseScheduler(SchedulerCode schedulerCode, long delaySeconds, Runnable task) {
+    public BaseScheduler(SchedulerCode schedulerCode, SchedulerDelayProperties delayProperties, Runnable task) {
+        this(schedulerCode, delayProperties, task, SchedulePolicy.FIXED_DELAY);
+    }
+
+    public BaseScheduler(SchedulerCode schedulerCode, SchedulerDelayProperties delayProperties, Runnable task, SchedulePolicy schedulePolicy) {
         this.schedulerCode = schedulerCode;
-        this.delaySeconds = delaySeconds;
+        this.delayProperties = delayProperties;
         this.task = task;
+        this.schedulePolicy = schedulePolicy;
 
         // 초기화 시 Registry에 자동 등록
         SchedulerRegistry.register(this.schedulerCode, this);
     }
+
 
     public synchronized void start() {
         if (isRunning.get()) {
@@ -56,13 +64,22 @@ public class BaseScheduler {
 
         this.executorService = Executors.newSingleThreadScheduledExecutor(virtualThreadFactory);
 
-        // initialDelay 5, scheduleWithFixedDelay 사용
-        this.scheduledTask = this.executorService.scheduleWithFixedDelay(
-                this::safeExecute,
-                5,
-                delaySeconds,
-                TimeUnit.SECONDS
-        );
+        // initialDelay 5초
+        if (schedulePolicy == SchedulePolicy.FIXED_DELAY) {
+            this.scheduledTask = this.executorService.scheduleWithFixedDelay(
+                    this::safeExecute,
+                    5,
+                    delayProperties.getDelay(this.schedulerCode),
+                    TimeUnit.SECONDS
+            );
+        } else {
+            this.scheduledTask = this.executorService.scheduleAtFixedRate(
+                    this::safeExecute,
+                    5,
+                    delayProperties.getDelay(this.schedulerCode),
+                    TimeUnit.SECONDS
+            );
+        }
 
         errorCount = 0;
         isRunning.set(true);

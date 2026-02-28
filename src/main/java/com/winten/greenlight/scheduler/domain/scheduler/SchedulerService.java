@@ -1,6 +1,7 @@
 package com.winten.greenlight.scheduler.domain.scheduler;
 
 import com.winten.greenlight.scheduler.api.controller.SchedulerResponse;
+import com.winten.greenlight.scheduler.scheduler.v2.SchedulerDelayProperties;
 import com.winten.greenlight.scheduler.scheduler.v2.SchedulerRegistry;
 import com.winten.greenlight.scheduler.support.error.CoreException;
 import com.winten.greenlight.scheduler.support.error.ErrorCode;
@@ -14,7 +15,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SchedulerService {
 
-    public List<SchedulerMeta> getSchedulersMeta() {
+    private final SchedulerDelayProperties delayProperties;
+
+    public List<SchedulerMeta> getSchedulerMetaList() {
         var schedulerList = SchedulerRegistry.getAll();
 
         var metaList = new ArrayList<SchedulerMeta>();
@@ -22,7 +25,7 @@ public class SchedulerService {
             var schedulerMeta = SchedulerMeta.builder()
                     .schedulerCode(scheduler.getSchedulerCode())
                     .status(scheduler.status())
-                    .delaySeconds(scheduler.getDelaySeconds())
+                    .delaySeconds(delayProperties.getDelay(scheduler.getSchedulerCode()))
                     .name(scheduler.getName())
                     .description(scheduler.getDescription())
                     .build();
@@ -32,54 +35,49 @@ public class SchedulerService {
         return metaList;
     }
 
-    public void start(SchedulerCode type) {
-        if (SchedulerCode.UNKNOWN == type) {
-            throw new CoreException(ErrorCode.UNKNOWN_SCHEDULER_TYPE, "알 수 없는 스케쥴러 타입입니다. type: " + type);
+    public SchedulerMeta getSchedulerMeta(SchedulerCode code) {
+        if (SchedulerCode.UNKNOWN == code) {
+            throw new CoreException(ErrorCode.UNKNOWN_SCHEDULER_TYPE, "알 수 없는 스케쥴러 타입입니다.");
         }
-        if (SchedulerStatus.RUNNING == this.getStatus(type)) {
-            throw new CoreException(ErrorCode.SCHEDULER_ALREADY_RUNNING, "스케쥴러가 이미 실행중입니다. type: " + type);
-        }
-        SchedulerRegistry.get(type).start();
+        var scheduler = SchedulerRegistry.get(code);
+        return SchedulerMeta.builder()
+                .schedulerCode(scheduler.getSchedulerCode())
+                .status(scheduler.status())
+                .delaySeconds(delayProperties.getDelay(scheduler.getSchedulerCode()))
+                .name(scheduler.getName())
+                .description(scheduler.getDescription())
+                .build();
     }
 
-    public void stop(SchedulerCode type) {
-        if (SchedulerCode.UNKNOWN == type) {
-            throw new CoreException(ErrorCode.UNKNOWN_SCHEDULER_TYPE, "알 수 없는 스케쥴러 타입입니다. type: " + type);
+    public void start(SchedulerCode code) {
+        var scheduler = this.getSchedulerMeta(code);
+        if (SchedulerStatus.RUNNING == scheduler.getStatus()) {
+            throw new CoreException(ErrorCode.SCHEDULER_ALREADY_RUNNING, "스케쥴러가 이미 실행중입니다. type: " + code);
         }
-        if (SchedulerStatus.STOPPED == this.getStatus(type)) {
-            throw new CoreException(ErrorCode.SCHEDULER_ALREADY_STOPPED, "스케쥴러가 이미 중단되었습니다. type: " + type);
-        }
-        SchedulerRegistry.get(type).stop();
+        SchedulerRegistry.get(code).start();
     }
 
-    public List<SchedulerResponse> getStatusList(SchedulerCode typeParam) {
-        if (SchedulerCode.UNKNOWN == typeParam) {
-            throw new CoreException(ErrorCode.UNKNOWN_SCHEDULER_TYPE, "알 수 없는 스케쥴러 타입입니다. type: " + typeParam);
+    public void stop(SchedulerCode code) {
+        var scheduler = this.getSchedulerMeta(code);
+        if (SchedulerStatus.STOPPED == scheduler.getStatus()) {
+            throw new CoreException(ErrorCode.SCHEDULER_ALREADY_STOPPED, "스케쥴러가 이미 중단되었습니다. type: " + code);
         }
-        List<SchedulerResponse> responseList = new ArrayList<>();
-        for (SchedulerCode t : SchedulerCode.values()) {
-            if (SchedulerCode.UNKNOWN == t) {
-                continue;
-            }
-            if (typeParam != null && typeParam != t) { // queryParam이 전달된 경우, typeParam에 해당하는 스케쥴러의 상태만 반환
-                continue;
-            }
-            var status = this.getStatus(t);
-            var res = SchedulerResponse.builder()
-                    .status(status)
-                    .schedulerCode(t)
-                    .build();
-            responseList.add(res);
-        }
-        return responseList;
+        SchedulerRegistry.get(code).stop();
     }
 
-    private SchedulerStatus getStatus(SchedulerCode type) {
-        boolean isRunning = SchedulerRegistry.get(type).isRunning();
-        if (isRunning) {
-            return SchedulerStatus.RUNNING;
-        } else {
-            return SchedulerStatus.STOPPED;
+    public SchedulerMeta updateDelay(final SchedulerCode schedulerCode, final Integer delaySeconds, boolean restart) {
+        delayProperties.setDelay(schedulerCode, delaySeconds);
+
+        if (restart) {
+            this.restart(schedulerCode);
         }
+
+        return this.getSchedulerMeta(schedulerCode);
+    }
+
+    public void restart(final SchedulerCode schedulerCode) {
+        var scheduler = SchedulerRegistry.get(schedulerCode);
+        scheduler.stop();
+        scheduler.start();
     }
 }

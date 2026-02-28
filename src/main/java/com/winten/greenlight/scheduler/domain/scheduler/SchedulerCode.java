@@ -14,13 +14,12 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum SchedulerCode {
     WAITING_TO_READY, /* 고객 입장처리 스케쥴러 (v2) */
-    OUTFLOW, /* 화면 이탈량 계산 스케쥴러 (v2) */
+    METRIC, /* 화면 이탈량 계산 스케쥴러 (v2) */
 
     RELOCATION, /* 고객 이동 스케쥴러 */
     CAPACITY, /* 대기열 활성사용자수 계산 스케쥴러 */
     CLEANUP_SESSION, /* session 정리 스케쥴러 */
     REDIS_CLEANUP, /* Redis stream 정리 스케쥴러 */
-    METRIC, /* Action Group 사이즈 기록 스케쥴러 */
     @JsonIgnore
     UNKNOWN /* 알 수 없음 */
     ;

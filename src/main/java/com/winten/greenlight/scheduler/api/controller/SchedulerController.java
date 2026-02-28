@@ -5,6 +5,7 @@ import com.winten.greenlight.scheduler.domain.scheduler.SchedulerConverter;
 import com.winten.greenlight.scheduler.domain.scheduler.SchedulerService;
 import com.winten.greenlight.scheduler.domain.scheduler.SchedulerStatus;
 import com.winten.greenlight.scheduler.domain.scheduler.SchedulerCode;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +21,7 @@ public class SchedulerController {
 
     @GetMapping("")
     public ResponseEntity<List<SchedulerResponse>> getAllSchedulers() {
-        var response = schedulerService.getSchedulersMeta()
+        var response = schedulerService.getSchedulerMetaList()
                 .stream()
                 .map(schedulerConverter::metaToResponse)
                 .toList();
@@ -52,9 +53,14 @@ public class SchedulerController {
         );
     }
 
-    @GetMapping("/status")
-    public ResponseEntity<List<SchedulerResponse>> status(@RequestParam(required = false) SchedulerCode schedulerCode) {
-        List<SchedulerResponse> responseList = schedulerService.getStatusList(schedulerCode);
-        return ResponseEntity.ok(responseList);
+    @PutMapping("/{schedulerCode}/delay")
+    public ResponseEntity<SchedulerResponse> updateSchedulerDelay(
+            @PathVariable SchedulerCode schedulerCode,
+            @Valid @RequestBody SchedulerDelayUpdateRequest request
+    ) {
+        var meta = schedulerService.updateDelay(schedulerCode, request.getDelaySeconds(), request.isRestart());
+        var response = schedulerConverter.metaToResponse(meta);
+        response.setMessage("Scheduler delay updated");
+        return ResponseEntity.ok(response);
     }
 }
