@@ -65,7 +65,7 @@ public class RoomService {
     }
 
     // 3초에 한번 돌리는걸 가정
-    public void recordRoomMetric() {
+    public void recordRoomMetric3s() {
         long now = System.currentTimeMillis();
         // 1. Metric 측정 기준 시작시간. 3초 단위로 딱 떨어지도록 계산
         long currentBucketStart = (now / 3000) * 3000 - 3000;

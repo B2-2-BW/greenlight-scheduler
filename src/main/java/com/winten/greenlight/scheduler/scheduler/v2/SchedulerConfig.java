@@ -18,7 +18,7 @@ public class SchedulerConfig {
         return new BaseScheduler(
                 SchedulerCode.METRIC,
                 delayProperties,
-                roomService::recordRoomMetric,
+                roomService::recordRoomMetric3s,
                 SchedulePolicy.FIXED_RATE
         );
     }

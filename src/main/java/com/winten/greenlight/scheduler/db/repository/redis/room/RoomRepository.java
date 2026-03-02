@@ -183,11 +183,11 @@ end
                 .exitedCount(result.get(4) + result.get(5)) // 이탈은 exited + dead 합한 값
                 .build();
 
-        long waitingRate = metric.getWaitingCount();
-        long enteredRate = metric.getEnteredCount();
-        long exitedRate = metric.getExitedCount();
-        var estimatedWaitTime = enteredRate != 0
-                ? metric.getTotalActive() / enteredRate
+        double waitingRate = (double) metric.getWaitingCount() / 3.0;
+        double enteredRate = (double) metric.getEnteredCount() / 3.0;
+        double exitedRate = (double) metric.getExitedCount() / 3.0;
+        long estimatedWaitTime = enteredRate != 0
+                ? metric.getTotalActive() / (long) enteredRate
                 : 0 ;
         metric.setWaitingRate(waitingRate);
         metric.setEnteredRate(enteredRate);
