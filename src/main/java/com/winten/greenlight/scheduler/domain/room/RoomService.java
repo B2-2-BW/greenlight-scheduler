@@ -64,6 +64,8 @@ public class RoomService {
         }
     }
 
+    // TODO [METRIC] 로직 실행 실패: / by zero 해결
+    // TODO
     // 3초에 한번 돌리는걸 가정
     public void recordRoomMetric3s() {
         long now = System.currentTimeMillis();
