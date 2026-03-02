@@ -24,7 +24,6 @@ spring:
     import: optional:file:.env[.properties]
   data:
     redis:
-
       host: ${REDIS_DEV_HOST:127.0.0.1}
       port: ${REDIS_DEV_PORT:6379}
       password: ${REDIS_PASSWORD}
@@ -54,6 +53,11 @@ influxdb:
 redis:
   key-prefix: ${REDIS_KEY_PREFIX}
   connection-type: ${REDIS_CONNECTION_TYPE:standalone}
+
+scheduler:
+  delays:
+    WAITING_TO_READY: 1
+    METRIC: 3
 
 ---
 

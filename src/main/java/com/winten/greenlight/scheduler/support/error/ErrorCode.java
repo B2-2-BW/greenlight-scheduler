@@ -15,6 +15,7 @@ public enum ErrorCode {
     JSON_DESERIALIZATION_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Json deserialization error", LogLevel.WARN ),
     SCHEDULER_ALREADY_RUNNING(HttpStatus.CONFLICT, "Scheduler is already running." , LogLevel.INFO),
     SCHEDULER_ALREADY_STOPPED(HttpStatus.CONFLICT, "Scheduler is already stopped." , LogLevel.INFO),
+    INVALID_SCHEDULER_DELAY(HttpStatus.BAD_REQUEST, "Scheduler delay must be greater than 0." , LogLevel.INFO),
     UNKNOWN_SCHEDULER_TYPE(HttpStatus.BAD_REQUEST, "Invalid scheduler type" , LogLevel.INFO),
     ;
 

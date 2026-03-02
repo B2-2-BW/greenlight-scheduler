@@ -4,13 +4,10 @@ import com.winten.greenlight.scheduler.domain.scheduler.SchedulerCode;
 import com.winten.greenlight.scheduler.support.error.CoreException;
 import com.winten.greenlight.scheduler.support.error.ErrorCode;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class SchedulerRegistry {
-    private static final Map<SchedulerCode, BaseScheduler> registry = new HashMap<>();
+    private static final Map<SchedulerCode, BaseScheduler> registry = new EnumMap<>(SchedulerCode.class);
 
     public static void register(SchedulerCode type, BaseScheduler scheduler) {
         Objects.requireNonNull(type, "type must not be null");
