@@ -121,7 +121,7 @@ public class BaseScheduler {
             task.run();
             errorCount = 0;
         } catch (Exception e) {
-            log.error("[{}] 로직 실행 실패: {}", schedulerCode, e.getMessage());
+            log.error("[{}] 로직 실행 실패", schedulerCode, e);
             errorCount += 1;
             if (errorCount == 3) {
                 this.stop();
