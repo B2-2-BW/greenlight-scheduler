@@ -65,7 +65,7 @@ public class RoomService {
     }
 
     // TODO [METRIC] 로직 실행 실패: / by zero 해결
-    // TODO
+    // TODO CROSSSLOT Keys in request don't hash to the same slot 해결하기
     // 3초에 한번 돌리는걸 가정
     public void recordRoomMetric3s() {
         long now = System.currentTimeMillis();
