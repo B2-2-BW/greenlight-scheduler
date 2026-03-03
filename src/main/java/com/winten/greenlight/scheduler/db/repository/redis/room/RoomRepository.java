@@ -109,13 +109,14 @@ end
     private static @lombok.NonNull DefaultRedisScript<List> getRoomMetricCalculationScript() {
         String script = """
             local countThreshold = tonumber(ARGV[1])
-            local deadThreshold = tonumber(ARGV[2])
+            local deadHeartbeatThreshold = tonumber(ARGV[2])
+            local enteredRateThreshold = tonumber(ARGV[3])
     
             -- 1. 대기(전체): countThreshold 이전의 데이터만 ZCOUNT로 계산
             local totalWaiting = redis.call('ZCOUNT', KEYS[1], '-inf', countThreshold)
     
-            -- 2. 이탈(만료): deadThreshold 이전 데이터 삭제 및 삭제된 개수 반환
-            local deadCount = redis.call('ZREMRANGEBYSCORE', KEYS[2], '-inf', deadThreshold)
+            -- 2. 이탈(만료): deadHeartbeatThreshold 이전 데이터 삭제 및 삭제된 개수 반환
+            local deadCount = redis.call('ZREMRANGEBYSCORE', KEYS[2], '-inf', deadHeartbeatThreshold)
     
             -- 3. 활성(전체): countThreshold 이전의 데이터만 ZCOUNT로 계산
             local totalActive = redis.call('ZCOUNT', KEYS[2], '-inf', countThreshold)
@@ -124,6 +125,9 @@ end
             local waitingIncr = tonumber(redis.call('GET', KEYS[3]) or '0')
             local enteredIncr = tonumber(redis.call('GET', KEYS[4]) or '0')
             local exitedIncr = tonumber(redis.call('GET', KEYS[5]) or '0')
+
+            -- 5. 5분 평균 입장량 계산을 위함
+            redis.call('ZREMRANGEBYSCORE', KEYS[6], '-inf', enteredRateThreshold)
     
             return { totalWaiting, totalActive, waitingIncr, enteredIncr, exitedIncr, deadCount }
     """;
@@ -153,25 +157,33 @@ end
      * @param roomId 대기열 ID
      * @param targetBucket 3초동안 대기, 입장, 이탈량이 기록된 Time bucket id
      * @param countThreshold 이 시간 이전의 대기/활성 사용자수 측정 (totalWaiting, totalActive)
-     * @param deadThreshold 이 시간이 지난 활성사용자는 삭제 (totalActive)
+     * @param deadHeartbeatThreshold 이 시간이 지난 활성사용자는 삭제 (totalActive)
      */
-    public RoomMetric calculateRoomMetric(String roomId, long targetBucket, long countThreshold, long deadThreshold) {
+    public RoomMetric calculateRoomMetric(
+            String roomId,
+            long targetBucket,
+            long countThreshold,
+            long deadHeartbeatThreshold,
+            long enteredRateThreshold
+    ) {
         // Time-Bucketed Key에 타임스탬프 조합 (예: room:1:metric:counter:WAITING:1700000002000)
         List<String> keys = List.of(
             redisKeyBuilder.roomQueue(roomId, WaitStatus.WAITING),
             redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.ENTERED),
             redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.WAITING, targetBucket),
             redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.ENTERED, targetBucket),
-            redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.EXITED, targetBucket)
+            redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.EXITED, targetBucket),
+            redisKeyBuilder.roomMetricEnteredRate5m(roomId)
         );
 
-        // script, keys, 그리고 ARGV에 들어갈 deadThreshold 전달
+        // script, keys, 그리고 ARGV에 들어갈 deadHeartbeatThreshold 전달
         @SuppressWarnings("unchecked")
         List<Long> result = (List<Long>) redisTemplate.execute(
             getRoomMetricCalculationScript(),
             keys,
             String.valueOf(countThreshold),
-            String.valueOf(deadThreshold)
+            String.valueOf(deadHeartbeatThreshold),
+            String.valueOf(enteredRateThreshold)
         );
 
         var metric = RoomMetric.builder()
