@@ -15,14 +15,6 @@ public class RedisKeyBuilder {
         return String.format("%s:action_group:*:meta", prefix);
     }
 
-    public String allActionGroupStatus() {
-        return String.format("%s:action_group:*:status", prefix);
-    }
-
-    public String actionGroupStatus(Long actionGroupId) {
-        return String.format("%s:action_group:%d:status", prefix, actionGroupId);
-    }
-
     public String actionGroupRequestLog(Long actionGroupId) {
         return prefix + ":action_group:" + actionGroupId + ":request_log";
     }
@@ -46,30 +38,27 @@ public class RedisKeyBuilder {
     public String actionEventStream() {
         return prefix + ":infra:action_event:stream";
     }
-    public String actionEventDlqStream() {
-        return prefix + ":infra:action_event:dlq";
-    }
 
     public String actionGroupWaitStatusPattern() {
         return prefix + ":action_group:*:queue:*";
     }
 
     public String allRoomMeta()  {
-        return prefix + ":room:*:meta";
+        return prefix + ":room:{*}:meta";
     }
 
     public String roomQueue(String roomId, WaitStatus waitStatus) {
-        return prefix + ":room:" + roomId + ":queue:" + waitStatus;
+        return prefix + ":room:{" + roomId + "}:queue:" + waitStatus;
     }
 
     public String roomHeartbeat(String roomId, WaitStatus heartbeatType) {
-        return prefix + ":room:" + roomId + ":heartbeat:" + heartbeatType;
+        return prefix + ":room:{" + roomId + "}:heartbeat:" + heartbeatType;
     }
     public String roomMetricCounter(String roomId, WaitStatus waitStatus, long timestamp) {
-        return prefix + ":room:" + roomId + ":metric:counter:" + waitStatus + ":" + timestamp;
+        return prefix + ":room:{" + roomId + "}:metric:counter:" + waitStatus + ":" + timestamp;
     }
     public String roomMetricLatest(String roomId) {
-        return prefix + ":room:" + roomId + ":metric:latest";
+        return prefix + ":room:{" + roomId + "}:metric:latest";
     }
     public String roomMetricVersion() {
         return prefix + ":room:versions:metric";
