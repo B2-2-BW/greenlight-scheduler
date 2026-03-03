@@ -76,7 +76,9 @@ public class RoomService {
         // 이 시간 이전의 대기/활성 사용자수 측정 (totalWaiting, totalActive)
         long countThreshold = currentBucketStart + 2999;
         // 2. 만료 기준 시간 (현재 시간 - 60초(60000ms))
-        long deadThreshold = now - 60000;
+        long deadHeartbeatThreshold = now - 60000;
+        // 3. 5분 입장량 기준 시간 (예상 대기시간 측정을 위한 긴 이동평균선)
+        long enteredRateThreshold = now - 300000;
 
         var rooms = roomRepository.getAllRoomList();
         var updated = false;
@@ -88,7 +90,8 @@ public class RoomService {
                     room.getRoomId(),
                     targetBucket,
                     countThreshold,
-                    deadThreshold
+                    deadHeartbeatThreshold,
+                    enteredRateThreshold
             );
             roomRepository.saveRoomMetric(metric);
             updated = true;
