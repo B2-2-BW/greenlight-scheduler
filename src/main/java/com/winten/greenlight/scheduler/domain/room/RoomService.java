@@ -55,7 +55,7 @@ public class RoomService {
 
 
 
-        long deadHeartbeatThreshold = now - 10000; // 2. 만료 기준 시간 (현재 시간 - 60초(60000ms))
+        long deadHeartbeatThreshold = now - 60000; // 2. 만료 기준 시간 (현재 시간 - 60초(60000ms))
         long metricBucket = (now / 3000) * 3000; // metric counter bucket
 
         var rooms = cachedRoomService.getAllRoomList();
