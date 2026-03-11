@@ -32,4 +32,14 @@ public class SchedulerConfig {
                 SchedulePolicy.FIXED_DELAY
         );
     }
+
+    @Bean(initMethod = "start", destroyMethod = "stop")
+    public BaseScheduler removeExpiredScheduler() {
+        return new BaseScheduler(
+                SchedulerCode.REMOVE_EXPIRED,
+                delayProperties,
+                roomService::removeExpired,
+                SchedulePolicy.FIXED_RATE
+        );
+    }
 }

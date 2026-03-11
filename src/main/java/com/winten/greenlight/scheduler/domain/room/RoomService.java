@@ -1,5 +1,6 @@
 package com.winten.greenlight.scheduler.domain.room;
 
+import com.winten.greenlight.scheduler.db.repository.redis.room.CachedRoomService;
 import com.winten.greenlight.scheduler.db.repository.redis.room.RoomRepository;
 import com.winten.greenlight.scheduler.domain.customer.WaitStatus;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RoomService {
     private final RoomRepository roomRepository;
+    private final CachedRoomService cachedRoomService;
 
     private long calculateMetricCounterBucket() {
         long currentBucketStart = (System.currentTimeMillis() / 3000) * 3000;
@@ -21,7 +23,7 @@ public class RoomService {
 
     public void relocateCustomers() {
         // 로직
-        List<Room> rooms = roomRepository.getAllRoomList();
+        List<Room> rooms = cachedRoomService.getAllRoomList();
 
         for (Room room: rooms) {
             if (!room.getEnabled() || room.getCapacity() == 0 || room.getMaxTrafficPerSecond() == 0) {
@@ -44,43 +46,33 @@ public class RoomService {
             // ticket 추출
             long movedCount = roomRepository.moveTicketsToEntered(room.getRoomId(), nextCount);
             long targetBucket = this.calculateMetricCounterBucket();
-            roomRepository.increaseMetricCount(room.getRoomId(), WaitStatus.ENTERED, targetBucket, movedCount);
-            log.debug("{}명 입장 완료", movedCount);
+            roomRepository.increaseMetricCountBy(room.getRoomId(), WaitStatus.ENTERED, targetBucket, movedCount);
         }
     }
 
-    public void removeExpiredEnteredQueue(Integer durationSeconds) {
-        if (durationSeconds <= 0L) {
-            throw new IllegalArgumentException("expireMinute must be positive.");
-        }
+    public void removeExpired() {
+        long now = System.currentTimeMillis();
 
-        // 현재 시각 기준 N초 이전(ex: 1초 = 1000밀리초) 이전 timestamp 계산
-        long currentTimeMillis = System.currentTimeMillis();
-        long expireTime = currentTimeMillis - (durationSeconds * 1000L);
 
-        List<Room> rooms = roomRepository.getAllRoomList();
-        for (Room room: rooms) {
-            roomRepository.removeEnteredQueueRanged(room.getRoomId(), expireTime);
+
+        long deadHeartbeatThreshold = now - 10000; // 2. 만료 기준 시간 (현재 시간 - 60초(60000ms))
+        long metricBucket = (now / 3000) * 3000; // metric counter bucket
+
+        var rooms = cachedRoomService.getAllRoomList();
+        for (var room: rooms) {
+            long deadHeartbeatCount = roomRepository.removeAndCountDeadEnteredHeartbeat(room.getRoomId(), deadHeartbeatThreshold);
+            roomRepository.increaseMetricCountBy(room.getRoomId(), WaitStatus.EXITED, metricBucket, deadHeartbeatCount);
         }
     }
 
-    // TODO [METRIC] 로직 실행 실패: / by zero 해결
-    // TODO CROSSSLOT Keys in request don't hash to the same slot 해결하기
     // 3초에 한번 돌리는걸 가정
     public void recordRoomMetric3s() {
         long now = System.currentTimeMillis();
-        // 1. Metric 측정 기준 시작시간. 3초 단위로 딱 떨어지도록 계산
-        long currentBucketStart = (now / 3000) * 3000 - 3000;
-        // 대시보드에는 직전에 완성된 3초 버킷 데이터를 제공
-        long targetBucket = currentBucketStart - 3000;
-        // 이 시간 이전의 대기/활성 사용자수 측정 (totalWaiting, totalActive)
-        long countThreshold = currentBucketStart + 2999;
-        // 2. 만료 기준 시간 (현재 시간 - 60초(60000ms))
-        long deadHeartbeatThreshold = now - 60000;
-        // 3. 5분 입장량 기준 시간 (예상 대기시간 측정을 위한 긴 이동평균선)
-        long enteredRateThreshold = now - 300000;
+        long currentBucketStart = (now / 3000) * 3000; // 1. Metric 측정 기준 시작시간. 3초 단위로 딱 떨어지도록 계산
+        long targetBucket = currentBucketStart - 3000; // 대시보드에는 직전에 완성된 3초 버킷 데이터를 제공
+        long countThreshold = currentBucketStart + 2999; // 이 시간 이전의 대기/활성 사용자수 측정 (totalWaiting, totalActive)
 
-        var rooms = roomRepository.getAllRoomList();
+        var rooms = cachedRoomService.getAllRoomList();
         var updated = false;
         for (var room: rooms) {
             if (!room.getEnabled()) {
@@ -89,11 +81,9 @@ public class RoomService {
             var metric = roomRepository.calculateRoomMetric(
                     room.getRoomId(),
                     targetBucket,
-                    countThreshold,
-                    deadHeartbeatThreshold,
-                    enteredRateThreshold
+                    countThreshold
             );
-            roomRepository.saveRoomMetric(metric);
+            roomRepository.saveRoomMetricLatest(metric);
             updated = true;
         }
         if (updated) {
