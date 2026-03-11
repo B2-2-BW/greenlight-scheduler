@@ -15,6 +15,7 @@ import lombok.Getter;
 public enum SchedulerCode {
     WAITING_TO_READY, /* 고객 입장처리 스케쥴러 (v2) */
     METRIC, /* 화면 이탈량 계산 스케쥴러 (v2) */
+    REMOVE_EXPIRED, /* 만료된 데이터 삭제 스케쥴러 (v2) */
 
     RELOCATION, /* 고객 이동 스케쥴러 */
     CAPACITY, /* 대기열 활성사용자수 계산 스케쥴러 */

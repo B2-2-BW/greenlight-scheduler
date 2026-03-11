@@ -58,6 +58,7 @@ scheduler:
   delays:
     WAITING_TO_READY: 1
     METRIC: 3
+    REMOVE_EXPIRED: 3
 
 ---
 

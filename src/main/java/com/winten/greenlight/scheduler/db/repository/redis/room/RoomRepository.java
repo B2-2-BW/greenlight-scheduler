@@ -6,16 +6,12 @@ import com.winten.greenlight.scheduler.domain.room.Room;
 import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Repository;
-import reactor.core.publisher.Mono;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,6 +22,7 @@ public class RoomRepository {
     private final RedisKeyBuilder redisKeyBuilder;
     private final RedisTemplate<String, String> redisTemplate;
     private final JsonMapper jsonMapper;
+    private final RoomRedisScript roomRedisScript;
 
     public List<Room> getAllRoomList() {
         String pattern = redisKeyBuilder.allRoomMeta();
@@ -65,7 +62,7 @@ public class RoomRepository {
         String enteredHeartbeatKey = redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.ENTERED);
 
         // Lua Script: 순서 보장 없이 동일한 Timestamp로 Bulk Insert
-        var redisScript = getMoveTicketRedisScript();
+        var redisScript = roomRedisScript.getMoveTicketRedisScript();
 
         // Score는 String으로 전달해도 Redis 내부에서 double로 파싱됨
         String nowScore = String.valueOf(System.currentTimeMillis());
@@ -78,66 +75,7 @@ public class RoomRepository {
         );
     }
 
-    private @NonNull DefaultRedisScript<Long> getMoveTicketRedisScript() {
-        String script = """
-local members = redis.call('ZRANGE', KEYS[1], 0, ARGV[1] - 1)
-if #members > 0 then
-    redis.call('ZREM', KEYS[1], unpack(members))
-    for _, member in ipairs(members) do
-        redis.call('ZADD', KEYS[2], ARGV[2], member)
-        redis.call('ZADD', KEYS[3], ARGV[2], member)
-    end
-    return #members
-else
-    return 0
-end
-""";
-        var redisScript = new DefaultRedisScript<Long>();
-        redisScript.setScriptText(script);
-        redisScript.setResultType(Long.class);
-        return redisScript;
-    }
 
-    public void removeEnteredQueueRanged(String roomId, long expireTime) {
-        var key = redisKeyBuilder.roomQueue(roomId, WaitStatus.ENTERED);
-        Long count = redisTemplate.opsForZSet().removeRangeByScore(key, 0, expireTime);
-        if (count != null && count > 0) {
-            log.info("[removeEnteredQueueRanged] RoomId: {}, {}명 삭제.", roomId, count);
-        }
-    }
-
-    private static @lombok.NonNull DefaultRedisScript<List> getRoomMetricCalculationScript() {
-        String script = """
-            local countThreshold = tonumber(ARGV[1])
-            local deadHeartbeatThreshold = tonumber(ARGV[2])
-            local enteredRateThreshold = tonumber(ARGV[3])
-    
-            -- 1. 대기(전체): countThreshold 이전의 데이터만 ZCOUNT로 계산
-            local totalWaiting = redis.call('ZCOUNT', KEYS[1], '-inf', countThreshold)
-    
-            -- 2. 이탈(만료): deadHeartbeatThreshold 이전 데이터 삭제 및 삭제된 개수 반환
-            local deadCount = redis.call('ZREMRANGEBYSCORE', KEYS[2], '-inf', deadHeartbeatThreshold)
-    
-            -- 3. 활성(전체): countThreshold 이전의 데이터만 ZCOUNT로 계산
-            local totalActive = redis.call('ZCOUNT', KEYS[2], '-inf', countThreshold)
-    
-            -- 4. 3초 구간 유입/입장/이탈 데이터 조회
-            local waitingIncr = tonumber(redis.call('GET', KEYS[3]) or '0')
-            local enteredIncr = tonumber(redis.call('GET', KEYS[4]) or '0')
-            local exitedIncr = tonumber(redis.call('GET', KEYS[5]) or '0')
-
-            -- 5. 5분 평균 입장량 계산을 위함
-            redis.call('ZREMRANGEBYSCORE', KEYS[6], '-inf', enteredRateThreshold)
-    
-            return { totalWaiting, totalActive, waitingIncr, enteredIncr, exitedIncr, deadCount }
-    """;
-
-        // 반환 타입을 List<Long>으로 지정
-        var redisScript = new DefaultRedisScript<List>();
-        redisScript.setScriptText(script);
-        redisScript.setResultType(List.class);
-        return redisScript;
-    }
 
     /**
      *
@@ -147,59 +85,52 @@ end
      *   <li>활성(전체): totalActive (heartbeat:ENTERED) -> 화면을 보고있는 활성사용자 수 Sorted Set: 실시간으로 기록됨 (60초 지난건 삭제)</li>
      *   <li>대기(3초): waitingIncr (metric:counter:WAITING:{timestamp})-> 사용자 유입량 counter: 실시간으로 기록됨. 3초 Time-Bucketed Key 사용</li>
      *   <li>입장(3초): enteredIncr (metric:counter:ENTERED:{timestamp}) -> 사용자 입장량 counter: 실시간으로 기록됨. 3초 Time-Bucketed Key 사용</li>
-     *   <li>이탈(3초): exitedIncr + dead
-     *    <ul>
-     *     <li>이탈(실시간): exitedIncr (metric:counter:EXITED:{timestamp} -> 이탈량 counter: 실시간으로 기록됨. 3초 Time-Bucketed Key 사용</p></li>
-     *     <li>이탈(만료): dead (heartbeat:ENTERED) -> 활성사용자 수 sorted set. 3초마다 60초 지난 heartbeat 체크 후 삭제)</li>
-     *    </ul>
-     *   </li>
+     *   <li>이탈(3초): exitedIncr (metric:counter:EXITED:{timestamp} -> 이탈량 counter: 실시간으로 기록됨. 3초 Time-Bucketed Key 사용</p></li>
      * </ul>
      * @param roomId 대기열 ID
      * @param targetBucket 3초동안 대기, 입장, 이탈량이 기록된 Time bucket id
      * @param countThreshold 이 시간 이전의 대기/활성 사용자수 측정 (totalWaiting, totalActive)
-     * @param deadHeartbeatThreshold 이 시간이 지난 활성사용자는 삭제 (totalActive)
      */
     public RoomMetric calculateRoomMetric(
             String roomId,
             long targetBucket,
-            long countThreshold,
-            long deadHeartbeatThreshold,
-            long enteredRateThreshold
+            long countThreshold
     ) {
-        // Time-Bucketed Key에 타임스탬프 조합 (예: room:1:metric:counter:WAITING:1700000002000)
-        List<String> keys = List.of(
-            redisKeyBuilder.roomQueue(roomId, WaitStatus.WAITING),
-            redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.ENTERED),
-            redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.WAITING, targetBucket),
-            redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.ENTERED, targetBucket),
-            redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.EXITED, targetBucket),
-            redisKeyBuilder.roomMetricEnteredRate5m(roomId)
-        );
+        List<String> keys = new ArrayList<>();
+        // 1~5번 키: 대기, 활성, 증분 데이터 키
+        keys.add(redisKeyBuilder.roomQueue(roomId, WaitStatus.WAITING));
+        keys.add(redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.ENTERED));
+        keys.add(redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.WAITING, targetBucket));
+        keys.add(redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.ENTERED, targetBucket));
+        keys.add(redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.EXITED, targetBucket));
+        // 6~65번 키: 과거 3분(60개) 동안의 EXITED 버킷 키
+        for (int i = 0; i < 60; i++) {
+            long pastBucket = targetBucket - (i * 3000);
+            keys.add(redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.EXITED, pastBucket));
+        }
 
-        // script, keys, 그리고 ARGV에 들어갈 deadHeartbeatThreshold 전달
         @SuppressWarnings("unchecked")
         List<Long> result = (List<Long>) redisTemplate.execute(
-            getRoomMetricCalculationScript(),
+            roomRedisScript.getRoomMetricCalculationScript(),
             keys,
-            String.valueOf(countThreshold),
-            String.valueOf(deadHeartbeatThreshold),
-            String.valueOf(enteredRateThreshold)
+            String.valueOf(countThreshold)
         );
 
         var metric = RoomMetric.builder()
                 .roomId(roomId)
                 .totalWaiting(result.get(0))
                 .totalActive(result.get(1))
-                .waitingCount(result.get(2))
-                .enteredCount(result.get(3))
-                .exitedCount(result.get(4) + result.get(5)) // 이탈은 exited + dead 합한 값
+                .recentlyExited(result.get(2))
+                .waitingCount(result.get(3))
+                .enteredCount(result.get(4))
+                .exitedCount(result.get(5)) // 이탈은 exited + dead 합한 값
                 .build();
 
         double waitingRate = (double) metric.getWaitingCount() / 3.0;
         double enteredRate = (double) metric.getEnteredCount() / 3.0;
         double exitedRate = (double) metric.getExitedCount() / 3.0;
-        long estimatedWaitTime = enteredRate != 0
-                ? metric.getTotalActive() / (long) enteredRate
+        long estimatedWaitTime = enteredRate != 0.0
+                ? Math.round(metric.getTotalActive() / enteredRate)
                 : 0 ;
         metric.setWaitingRate(waitingRate);
         metric.setEnteredRate(enteredRate);
@@ -208,7 +139,7 @@ end
         return metric;
     }
 
-    public void saveRoomMetric(RoomMetric metric) {
+    public void saveRoomMetricLatest(RoomMetric metric) {
         String key = redisKeyBuilder.roomMetricLatest(metric.getRoomId());
         String value = jsonMapper.writeValueAsString(metric);
         redisTemplate.opsForValue().set(key, value);
@@ -219,14 +150,32 @@ end
         redisTemplate.opsForValue().set(key, String.valueOf(version));
     }
 
-    public void increaseMetricCount(String roomId, WaitStatus metricType, long targetBucket, long count) {
+
+    public void increaseMetricCountBy(String roomId, WaitStatus metricType, long targetBucket, long count) {
         if (count <= 0) {
             return;
         }
-        String key = redisKeyBuilder.roomMetricCounter(roomId, metricType, targetBucket);
-        long updated = redisTemplate.opsForValue().increment(key, count);
-        if (updated == 1L) { // count == 1 이면 처음 만들어진 키이므로 TTL 세팅
-            redisTemplate.expire(key, Duration.ofSeconds(30));
-        }
+        var key = redisKeyBuilder.roomMetricCounter(roomId, metricType, targetBucket);
+        redisTemplate.execute(
+                roomRedisScript.getIncreaseMetricCountByRedisScript(),
+                List.of(key),
+                String.valueOf(count),
+                "180"
+        );
+    }
+
+    public Long removeAndCountDeadEnteredHeartbeat(String roomId, long deadHeartbeatThreshold) {
+        var key = redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.ENTERED);
+        return redisTemplate.opsForZSet().removeRangeByScore(key, 0, deadHeartbeatThreshold);
+    }
+
+    public Long removeMetricExited5m(String roomId, long exited5mThreshold) {
+        var key = redisKeyBuilder.roomMetricExited5m(roomId);
+        return redisTemplate.opsForZSet().removeRangeByScore(key, 0, exited5mThreshold);
+    }
+
+    public Boolean addToExitRate5m(String roomId, String ticketId, long score) {
+        String key = redisKeyBuilder.roomMetricExited5m(roomId);
+        return redisTemplate.opsForZSet().add(key, ticketId, score);
     }
 }

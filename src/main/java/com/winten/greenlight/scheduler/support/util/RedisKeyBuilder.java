@@ -63,7 +63,7 @@ public class RedisKeyBuilder {
     public String roomMetricVersion() {
         return prefix + ":room:versions:metric";
     }
-    public String roomMetricEnteredRate5m(String roomId) {
-        return prefix + ":room:{" + roomId + "}:metric:entered_rate_5m";
+    public String roomMetricExited5m(String roomId) {
+        return prefix + ":room:{" + roomId + "}:metric:exited_5m";
     }
 }
