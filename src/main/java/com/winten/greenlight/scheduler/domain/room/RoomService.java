@@ -83,11 +83,19 @@ public class RoomService {
                     targetBucket,
                     countThreshold
             );
+            long estimatedWaitTime = calculateEstimatedWaitTime(room, metric);
+            metric.setEstimatedWaitTime(estimatedWaitTime);
             roomRepository.saveRoomMetricLatest(metric);
             updated = true;
         }
         if (updated) {
             roomRepository.updateRoomMetricVersion(currentBucketStart); // 버전 업데이트
         }
+    }
+
+    private long calculateEstimatedWaitTime(Room room, RoomMetric metric) {
+        long capacity = room.getCapacity();
+        long current = metric.getTotalActive();
+
     }
 }
