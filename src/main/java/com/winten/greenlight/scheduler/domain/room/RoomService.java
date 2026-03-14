@@ -83,6 +83,7 @@ public class RoomService {
                     targetBucket,
                     countThreshold
             );
+            metric.setRoomCapacity(room.getCapacity());
             long estimatedWaitTime = calculateEstimatedWaitTime(room.getCapacity(), metric.getTotalActive(), metric.getTotalWaiting(), metric.getRecentlyExited());
             metric.setEstimatedWaitTime(estimatedWaitTime);
             roomRepository.saveRoomMetricLatest(metric);
@@ -94,6 +95,9 @@ public class RoomService {
     }
 
     private long calculateEstimatedWaitTime(long capacity, long totalActive, long totalWaiting, long recentlyExited) {
+        if (capacity <= 0) { // capacity가 0보다 작으면 입장불가
+            return -1;
+        }
         long remainder = totalWaiting - (capacity - totalActive);
         if (remainder <= 0) {  // 1. 남는 자리가 있다면 바로입장 가능.
             return 0;
