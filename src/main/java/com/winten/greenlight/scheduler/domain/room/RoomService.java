@@ -83,7 +83,7 @@ public class RoomService {
                     targetBucket,
                     countThreshold
             );
-            long estimatedWaitTime = calculateEstimatedWaitTime(room, metric);
+            long estimatedWaitTime = calculateEstimatedWaitTime(room.getCapacity(), metric.getTotalActive(), metric.getTotalWaiting(), metric.getRecentlyExited());
             metric.setEstimatedWaitTime(estimatedWaitTime);
             roomRepository.saveRoomMetricLatest(metric);
             updated = true;
@@ -93,9 +93,15 @@ public class RoomService {
         }
     }
 
-    private long calculateEstimatedWaitTime(Room room, RoomMetric metric) {
-        long capacity = room.getCapacity();
-        long current = metric.getTotalActive();
-
+    private long calculateEstimatedWaitTime(long capacity, long totalActive, long totalWaiting, long recentlyExited) {
+        long remainder = totalWaiting - (capacity - totalActive);
+        if (remainder <= 0) {  // 1. 남는 자리가 있다면 바로입장 가능.
+            return 0;
+        }
+        if (recentlyExited < capacity * 3) { // 2. 집계된 recentlyExited가 너무 적을 때 임의로 수치를 조정함
+            // recentlyExited는 3분간 나간 전체 사용자 수. 30초 머무는 상황이므로 capacity가 1일 때 3분동안 6명이 나감.
+            recentlyExited = Math.round(capacity * 2.1 + recentlyExited * 0.3);
+        }
+        return (remainder * 180) / recentlyExited;
     }
 }

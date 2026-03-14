@@ -1,6 +1,5 @@
 package com.winten.greenlight.scheduler.domain.scheduler;
 
-import com.winten.greenlight.scheduler.api.controller.SchedulerResponse;
 import com.winten.greenlight.scheduler.scheduler.v2.SchedulerDelayProperties;
 import com.winten.greenlight.scheduler.scheduler.v2.SchedulerRegistry;
 import com.winten.greenlight.scheduler.support.error.CoreException;
