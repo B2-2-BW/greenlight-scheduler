@@ -7,6 +7,7 @@ import lombok.Data;
 @Builder
 public class RoomMetric {
     private String roomId;
+    private int roomCapacity;
     private long totalWaiting;
     private long totalActive;
     private long recentlyExited;

@@ -129,13 +129,9 @@ public class RoomRepository {
         double waitingRate = (double) metric.getWaitingCount() / 3.0;
         double enteredRate = (double) metric.getEnteredCount() / 3.0;
         double exitedRate = (double) metric.getExitedCount() / 3.0;
-        long estimatedWaitTime = enteredRate != 0.0
-                ? Math.round(metric.getTotalActive() / enteredRate)
-                : 0 ;
         metric.setWaitingRate(waitingRate);
         metric.setEnteredRate(enteredRate);
         metric.setExitedRate(exitedRate);
-        metric.setEstimatedWaitTime(estimatedWaitTime);
         return metric;
     }
 
@@ -167,15 +163,5 @@ public class RoomRepository {
     public Long removeAndCountDeadEnteredHeartbeat(String roomId, long deadHeartbeatThreshold) {
         var key = redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.ENTERED);
         return redisTemplate.opsForZSet().removeRangeByScore(key, 0, deadHeartbeatThreshold);
-    }
-
-    public Long removeMetricExited5m(String roomId, long exited5mThreshold) {
-        var key = redisKeyBuilder.roomMetricExited5m(roomId);
-        return redisTemplate.opsForZSet().removeRangeByScore(key, 0, exited5mThreshold);
-    }
-
-    public Boolean addToExitRate5m(String roomId, String ticketId, long score) {
-        String key = redisKeyBuilder.roomMetricExited5m(roomId);
-        return redisTemplate.opsForZSet().add(key, ticketId, score);
     }
 }
