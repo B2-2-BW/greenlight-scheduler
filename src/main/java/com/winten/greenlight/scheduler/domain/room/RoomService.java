@@ -1,12 +1,18 @@
 package com.winten.greenlight.scheduler.domain.room;
 
+import com.influxdb.client.domain.WritePrecision;
+import com.influxdb.client.write.Point;
 import com.winten.greenlight.scheduler.db.repository.redis.room.CachedRoomService;
 import com.winten.greenlight.scheduler.db.repository.redis.room.RoomRepository;
 import com.winten.greenlight.scheduler.domain.customer.WaitStatus;
+import com.winten.greenlight.scheduler.domain.influx.InfluxService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -15,6 +21,15 @@ import java.util.List;
 public class RoomService {
     private final RoomRepository roomRepository;
     private final CachedRoomService cachedRoomService;
+    private final InfluxService influxService;
+
+    @Value("${influxdb.org}")
+    private String influxOrganization;
+    @Value("${influxdb.bucket}")
+    private String influxBucket;
+
+
+    private final String MEASUREMENT_ROOM_METRIC = "room_metric";
 
     private long calculateMetricCounterBucket() {
         long currentBucketStart = (System.currentTimeMillis() / 3000) * 3000;
@@ -74,8 +89,9 @@ public class RoomService {
 
         var rooms = cachedRoomService.getAllRoomList();
         var updated = false;
+        var metricPoints = new ArrayList<Point>();
         for (var room: rooms) {
-            if (!room.getEnabled()) {
+            if (!room.getEnabled() || room.getRoomEnvironment() == RoomEnvironment.DEV) { // 비활성화 또는 개발인 경우 기록하지 않음
                 continue;
             }
             var metric = roomRepository.calculateRoomMetric(
@@ -88,10 +104,14 @@ public class RoomService {
             metric.setEstimatedWaitTime(estimatedWaitTime);
             roomRepository.saveRoomMetricLatest(metric);
             updated = true;
+            var metricPoint = makeMetricPoint(room, metric);
+            metricPoints.add(metricPoint);
         }
         if (updated) {
             roomRepository.updateRoomMetricVersion(currentBucketStart); // 버전 업데이트
         }
+
+        influxService.writePointsAsync(influxBucket, influxOrganization, metricPoints);
     }
 
     private long calculateEstimatedWaitTime(long capacity, long totalActive, long totalWaiting, long recentlyExited) {
@@ -107,5 +127,20 @@ public class RoomService {
             recentlyExited = Math.round(capacity * 2.1 + recentlyExited * 0.3);
         }
         return (remainder * 180) / recentlyExited;
+    }
+
+    private Point makeMetricPoint(Room r, RoomMetric m) {
+        return Point.measurement(MEASUREMENT_ROOM_METRIC)
+                .addTag("room_id", m.getRoomId())
+                .addTag("room_environment", r.getRoomEnvironment().name())
+                .addField("room_capacity", m.getRoomCapacity())
+                .addField("total_waiting", m.getTotalWaiting())
+                .addField("total_active", m.getTotalActive())
+                .addField("recently_exited_3m", m.getRecentlyExited())
+                .addField("waiting_count", m.getWaitingCount())
+                .addField("entered_count", m.getEnteredCount())
+                .addField("exited_count", m.getExitedCount())
+                .addField("estimated_wait_time", m.getEstimatedWaitTime())
+                .time(Instant.now(), WritePrecision.MS);
     }
 }

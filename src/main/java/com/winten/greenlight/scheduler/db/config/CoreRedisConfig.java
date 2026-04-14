@@ -1,6 +1,7 @@
 package com.winten.greenlight.scheduler.db.config;
 
 import io.lettuce.core.ReadFrom;
+import io.lettuce.core.SocketOptions;
 import io.lettuce.core.TimeoutOptions;
 import io.lettuce.core.cluster.ClusterClientOptions;
 import io.lettuce.core.cluster.ClusterTopologyRefreshOptions;
@@ -66,6 +67,12 @@ public class CoreRedisConfig {
                 .enablePeriodicRefresh(Duration.ofSeconds(30)) // 주기적으로 토폴로지 새로고침
                 .enableAllAdaptiveRefreshTriggers() // MOVEC, ASK 등 트리거에 반응하여 새로고침
                 .adaptiveRefreshTriggersTimeout(Duration.ofSeconds(25)) // 적응형 새로고침 타임아웃
+                .dynamicRefreshSources(true)
+                .closeStaleConnections(true)
+                .build();
+
+        var socketOptions = SocketOptions.builder()
+                .keepAlive(true)
                 .build();
 
         var clusterClientOptions = ClusterClientOptions.builder()
@@ -73,15 +80,20 @@ public class CoreRedisConfig {
                 .timeoutOptions(TimeoutOptions.enabled(Duration.ofSeconds(3)))
                 .maxRedirects(3)
                 .autoReconnect(true)
+                .pingBeforeActivateConnection(true)
+                .socketOptions(socketOptions)
                 .build();
 
-        var clientConfig = LettuceClientConfiguration.builder()
+        var clientConfigBuilder = LettuceClientConfiguration.builder()
                 .clientResources(clientResources)
                 .clientOptions(clusterClientOptions)
                 .readFrom(ReadFrom.REPLICA_PREFERRED) // 읽기 작업을 슬레이브 노드에서 수행하도록 설정
-                .commandTimeout(Duration.ofSeconds(3)) // 커맨드 타임아웃 설정
-                .build();
+                .commandTimeout(Duration.ofSeconds(3)); // 커맨드 타임아웃 설정
 
-        return new LettuceConnectionFactory(clusterConfig, clientConfig);
+        if (properties.getSsl().isEnabled()) {
+            clientConfigBuilder.useSsl();
+        }
+
+        return new LettuceConnectionFactory(clusterConfig, clientConfigBuilder.build());
     }
 }
