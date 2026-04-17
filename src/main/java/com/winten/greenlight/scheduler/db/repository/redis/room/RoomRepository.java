@@ -164,4 +164,10 @@ public class RoomRepository {
         var key = redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.ENTERED);
         return redisTemplate.opsForZSet().removeRangeByScore(key, 0, deadHeartbeatThreshold);
     }
+
+    public void removeEnteredQueue(String roomId, long expireTime) {
+        var key = redisKeyBuilder.roomQueue(roomId, WaitStatus.ENTERED);
+
+        redisTemplate.opsForZSet().removeRangeByScore(key, 0, expireTime);
+    }
 }

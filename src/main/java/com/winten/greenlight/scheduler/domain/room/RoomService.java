@@ -28,7 +28,6 @@ public class RoomService {
     @Value("${influxdb.bucket}")
     private String influxBucket;
 
-
     private final String MEASUREMENT_ROOM_METRIC = "room_metric";
 
     private long calculateMetricCounterBucket() {
@@ -68,15 +67,15 @@ public class RoomService {
     public void removeExpired() {
         long now = System.currentTimeMillis();
 
-
-
         long deadHeartbeatThreshold = now - 60000; // 2. 만료 기준 시간 (현재 시간 - 60초(60000ms))
         long metricBucket = (now / 3000) * 3000; // metric counter bucket
+        long enteredQueueExpireTime = System.currentTimeMillis() - (86400_000L); // 1일
 
         var rooms = cachedRoomService.getAllRoomList();
         for (var room: rooms) {
             long deadHeartbeatCount = roomRepository.removeAndCountDeadEnteredHeartbeat(room.getRoomId(), deadHeartbeatThreshold);
             roomRepository.increaseMetricCountBy(room.getRoomId(), WaitStatus.EXITED, metricBucket, deadHeartbeatCount);
+            roomRepository.removeEnteredQueue(room.getRoomId(), enteredQueueExpireTime); // 1일 지난 queue:ENTERED 삭제
         }
     }
 
