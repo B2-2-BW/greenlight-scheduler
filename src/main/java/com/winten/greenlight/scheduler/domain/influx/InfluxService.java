@@ -39,7 +39,7 @@ public class InfluxService {
 
         } catch (Exception e) {
             // 실패 시 스레드를 블로킹하지 않고 큐에 넣은 뒤 즉시 종료
-            log.warn("[InfluxDB] 쓰기 실패. Queue에 임시 저장합니다. (현재 Queue 사이즈: {}) cause: {}",
+            log.error("[InfluxDB] 쓰기 실패. Queue에 임시 저장합니다. (현재 Queue 사이즈: {}) cause: {}",
                     retryQueue.size(), e.getMessage());
             enqueueForRetry(bucket, org, points);
         }
@@ -56,7 +56,7 @@ public class InfluxService {
                 log.info("[InfluxDB] 실패했던 데이터 재전송 완료 (bucket: {})", payload.bucket());
             } catch (Exception e) {
                 // 재전송 중 다시 실패하면, 멈추고 다음 스케쥴러 호출을 기약함
-                log.warn("[InfluxDB] 재전송 실패. 다음 기회에 다시 시도합니다.");
+                log.error("[InfluxDB] 재전송 실패. 다음 기회에 다시 시도합니다.");
                 break;
             }
         }
