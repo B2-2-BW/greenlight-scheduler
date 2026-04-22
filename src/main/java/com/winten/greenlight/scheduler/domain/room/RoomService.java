@@ -103,8 +103,11 @@ public class RoomService {
             metric.setEstimatedWaitTime(estimatedWaitTime);
             roomRepository.saveRoomMetricLatest(metric);
             updated = true;
-            var metricPoint = makeMetricPoint(room, metric);
-            metricPoints.add(metricPoint);
+            // 운영환경인 경우에만 influxDB에 저장
+            if (room.getRoomEnvironment() == RoomEnvironment.LIVE) {
+                var metricPoint = makeMetricPoint(room, metric);
+                metricPoints.add(metricPoint);
+            }
         }
         if (updated) {
             roomRepository.updateRoomMetricVersion(currentBucketStart); // 버전 업데이트
