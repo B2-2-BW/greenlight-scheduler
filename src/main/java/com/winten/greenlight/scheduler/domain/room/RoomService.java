@@ -90,7 +90,7 @@ public class RoomService {
         var updated = false;
         var metricPoints = new ArrayList<Point>();
         for (var room: rooms) {
-            if (!room.getEnabled() || room.getRoomEnvironment() == RoomEnvironment.DEV) { // 비활성화 또는 개발인 경우 기록하지 않음
+            if (!room.getEnabled()) { // 비활성화인 경우 기록하지 않음
                 continue;
             }
             var metric = roomRepository.calculateRoomMetric(
