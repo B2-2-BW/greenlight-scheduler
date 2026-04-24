@@ -36,10 +36,11 @@ end
         local waitingIncr = tonumber(redis.call('GET', KEYS[3]) or '0')
         local enteredIncr = tonumber(redis.call('GET', KEYS[4]) or '0')
         local exitedIncr = tonumber(redis.call('GET', KEYS[5]) or '0')
+        local cancelledIncr = tonumber(redis.call('GET', KEYS[6]) or '0')
 
         -- 3. EXITED 60개 버킷 리스트 추출 (KEYS[6] 부터 끝까지)
         local exitedKeys = {}
-        for i = 6, #KEYS do
+        for i = 7, #KEYS do
             exitedKeys[#exitedKeys + 1] = KEYS[i]
         end
 
@@ -55,7 +56,7 @@ end
             end
         end
 
-        return { totalWaiting, totalActive, recentlyExited, waitingIncr, enteredIncr, exitedIncr }
+        return { totalWaiting, totalActive, recentlyExited, waitingIncr, enteredIncr, exitedIncr, cancelledIncr }
     """, List.class);
 
 
@@ -70,4 +71,11 @@ end
         return count
     """, Long.class);
 
+    private final RedisScript<List> getAndRemoveExpiredWaitingHeartbeatRedisScript = RedisScript.of("""
+        local members = redis.call('ZRANGEBYSCORE', KEYS[1], 0, ARGV[1])
+        if #members > 0 then
+            redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, ARGV[1])
+        end
+        return members
+    """, List.class);
 }
