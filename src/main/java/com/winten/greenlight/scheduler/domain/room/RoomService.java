@@ -72,10 +72,19 @@ public class RoomService {
         long enteredQueueExpireTime = System.currentTimeMillis() - (86400_000L); // 1일
 
         var rooms = cachedRoomService.getAllRoomList();
+
+        var waitingHeartbeatThreshold = System.currentTimeMillis() - 60_000;
         for (var room: rooms) {
             long deadHeartbeatCount = roomRepository.removeAndCountDeadEnteredHeartbeat(room.getRoomId(), deadHeartbeatThreshold);
             roomRepository.increaseMetricCountBy(room.getRoomId(), WaitStatus.EXITED, metricBucket, deadHeartbeatCount);
             roomRepository.removeEnteredQueue(room.getRoomId(), enteredQueueExpireTime); // 1일 지난 queue:ENTERED 삭제
+
+            // 이 부분
+            List<String> expiredTicketList = roomRepository.getAndRemoveExpiredWaitingHeartbeat(room.getRoomId(), waitingHeartbeatThreshold);
+            if (expiredTicketList != null && !expiredTicketList.isEmpty()) {
+                roomRepository.removeQueueBulk(room.getRoomId(), WaitStatus.WAITING, expiredTicketList);
+                roomRepository.increaseMetricCountBy(room.getRoomId(), WaitStatus.CANCELLED, metricBucket, expiredTicketList.size());
+            }
         }
     }
 
@@ -142,6 +151,7 @@ public class RoomService {
                 .addField("waiting_count", m.getWaitingCount())
                 .addField("entered_count", m.getEnteredCount())
                 .addField("exited_count", m.getExitedCount())
+                .addField("cancelled_count", m.getCancelledCount())
                 .addField("estimated_wait_time", m.getEstimatedWaitTime())
                 .time(Instant.now(), WritePrecision.MS);
     }

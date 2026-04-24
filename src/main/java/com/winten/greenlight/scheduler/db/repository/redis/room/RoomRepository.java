@@ -1,8 +1,8 @@
 package com.winten.greenlight.scheduler.db.repository.redis.room;
 
 import com.winten.greenlight.scheduler.domain.customer.WaitStatus;
-import com.winten.greenlight.scheduler.domain.room.RoomMetric;
 import com.winten.greenlight.scheduler.domain.room.Room;
+import com.winten.greenlight.scheduler.domain.room.RoomMetric;
 import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -103,7 +103,8 @@ public class RoomRepository {
         keys.add(redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.WAITING, targetBucket));
         keys.add(redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.ENTERED, targetBucket));
         keys.add(redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.EXITED, targetBucket));
-        // 6~65번 키: 과거 3분(60개) 동안의 EXITED 버킷 키
+        keys.add(redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.CANCELLED, targetBucket));
+        // 7~66번 키: 과거 3분(60개) 동안의 EXITED 버킷 키
         for (int i = 0; i < 60; i++) {
             long pastBucket = targetBucket - (i * 3000);
             keys.add(redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.EXITED, pastBucket));
@@ -124,6 +125,7 @@ public class RoomRepository {
                 .waitingCount(result.get(3))
                 .enteredCount(result.get(4))
                 .exitedCount(result.get(5)) // 이탈은 exited + dead 합한 값
+                .cancelledCount(result.get(6)) // 이탈은 exited + dead 합한 값
                 .build();
 
         double waitingRate = (double) metric.getWaitingCount() / 3.0;
@@ -152,11 +154,13 @@ public class RoomRepository {
             return;
         }
         var key = redisKeyBuilder.roomMetricCounter(roomId, metricType, targetBucket);
+        var durationSeconds = "180"; // metric counter TTL은 180초 (3분)
         redisTemplate.execute(
                 roomRedisScript.getIncreaseMetricCountByRedisScript(),
                 List.of(key),
                 String.valueOf(count),
-                "180"
+                durationSeconds
+
         );
     }
 
@@ -169,5 +173,28 @@ public class RoomRepository {
         var key = redisKeyBuilder.roomQueue(roomId, WaitStatus.ENTERED);
 
         redisTemplate.opsForZSet().removeRangeByScore(key, 0, expireTime);
+    }
+
+    public List<String> getAndRemoveExpiredWaitingHeartbeat(String roomId, long threshold) {
+        var key = redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.WAITING);
+
+        return redisTemplate.execute(
+                roomRedisScript.getGetAndRemoveExpiredWaitingHeartbeatRedisScript(),
+                List.of(key),
+                String.valueOf(threshold)
+        );
+    }
+
+    public void removeQueueBulk(String roomId, WaitStatus waitStatus, List<String> values) {
+        if (values == null || values.isEmpty()) return;
+
+        var key = redisKeyBuilder.roomQueue(roomId, waitStatus);
+
+        // 1,000건씩 청크로 나눠 처리
+        int chunkSize = 1_000;
+        for (int i = 0; i < values.size(); i += chunkSize) {
+            List<String> chunk = values.subList(i, Math.min(i + chunkSize, values.size()));
+            redisTemplate.opsForZSet().remove(key, chunk.toArray());
+        }
     }
 }

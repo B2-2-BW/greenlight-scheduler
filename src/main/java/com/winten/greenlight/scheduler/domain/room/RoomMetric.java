@@ -14,6 +14,7 @@ public class RoomMetric {
     private long waitingCount; // 3초동안 증가한 대기인원 수
     private long enteredCount; // 3초동안 화면에 진입한 인원 수
     private long exitedCount; // 3초동안 화면에서 이탈한 사용자 수
+    private long cancelledCount; // 3초동안 대기중 이탈한 사용자 수
     private double waitingRate;  // 1초동안 증가한 대기인원 수 (count / 3)
     private double enteredRate; // 1초동안 화면에 진입한 인원 수 (count / 3)
     private double exitedRate; // 1초동안 화면에서 이탈한 사용자 수 (count / 3)
