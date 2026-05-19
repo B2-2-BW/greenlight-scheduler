@@ -66,4 +66,12 @@ public class RedisKeyBuilder {
     public String roomMetricExited5m(String roomId) {
         return prefix + ":room:{" + roomId + "}:metric:exited_5m";
     }
+
+    public String roomMeta(String roomId) {
+        return prefix + ":room:{" + roomId + "}:meta";
+    }
+
+    public String siteRoomId() {
+        return prefix + ":site:roomId";
+    }
 }

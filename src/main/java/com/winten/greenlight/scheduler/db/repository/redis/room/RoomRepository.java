@@ -7,13 +7,14 @@ import com.winten.greenlight.scheduler.support.util.RedisKeyBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Repository;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Repository
@@ -21,21 +22,42 @@ import java.util.List;
 public class RoomRepository {
     private final RedisKeyBuilder redisKeyBuilder;
     private final RedisTemplate<String, String> redisTemplate;
+    private final RedisTemplate<String, Object> jsonRedisTemplate;
     private final JsonMapper jsonMapper;
     private final RoomRedisScript roomRedisScript;
 
     public List<Room> getAllRoomList() {
-        String pattern = redisKeyBuilder.allRoomMeta();
+        String key = redisKeyBuilder.siteRoomId();
+
+        Map<Object, Object> entries = jsonRedisTemplate.opsForHash().entries(key);
+
+        Map<String, List<String>> roomIdMap = entries.entrySet().stream().collect(Collectors.toMap(
+                entry -> entry.getKey().toString(), // 필드명을 String으로 변환
+                entry -> {
+                    Object value = entry.getValue();
+
+                    // 타입이 List인 경우 -> List<String>으로 변환
+                    if (value instanceof List) {
+                        return ((List<?>) value).stream()
+                                .map(Object::toString)
+                                .collect(Collectors.toList());
+                    }
+
+                    // 타입이 단일 String(또는 기타 Object)인 경우 -> 빈 리스트나 단일 원소 리스트로 변환
+                    if (value != null) {
+                        return List.of(value.toString());
+                    }
+
+                    return List.of(); // null 방어 처리
+                }
+        ));
+
         List<Room> rooms = new ArrayList<>();
 
-        try (var cursor = redisTemplate.scan(ScanOptions.scanOptions()
-                .match(pattern)
-                .count(100)
-                .build())) {
-
-            while (cursor.hasNext()) {
-                String key = cursor.next();
-                String roomMetaJson = redisTemplate.opsForValue().get(key);
+        for (var roomIdList: roomIdMap.values()) {
+            for (var roomId: roomIdList) {
+                String roomKey = redisKeyBuilder.roomMeta(roomId);
+                String roomMetaJson = redisTemplate.opsForValue().get(roomKey);
                 if (roomMetaJson != null) {
                     try {
                         Room room = jsonMapper.readValue(roomMetaJson, Room.class);
