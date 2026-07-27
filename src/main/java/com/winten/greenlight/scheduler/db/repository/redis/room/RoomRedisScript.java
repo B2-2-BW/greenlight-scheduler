@@ -15,6 +15,7 @@ public class RoomRedisScript {
 local members = redis.call('ZRANGE', KEYS[1], 0, ARGV[1] - 1)
 if #members > 0 then
     redis.call('ZREM', KEYS[1], unpack(members))
+    redis.call('ZREM', KEYS[4], unpack(members))
     for _, member in ipairs(members) do
         redis.call('ZADD', KEYS[2], ARGV[2], member)
         redis.call('ZADD', KEYS[3], ARGV[2], member)
