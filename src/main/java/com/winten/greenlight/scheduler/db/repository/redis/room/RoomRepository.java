@@ -82,6 +82,7 @@ public class RoomRepository {
         String waitingKey = redisKeyBuilder.roomQueue(roomId, WaitStatus.WAITING);
         String enteredKey = redisKeyBuilder.roomQueue(roomId, WaitStatus.ENTERED);
         String enteredHeartbeatKey = redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.ENTERED);
+        String waitingHeartbeatKey = redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.WAITING);
 
         // Lua Script: 순서 보장 없이 동일한 Timestamp로 Bulk Insert
         var redisScript = roomRedisScript.getMoveTicketRedisScript();
@@ -91,7 +92,7 @@ public class RoomRepository {
 
         return redisTemplate.execute(
                 redisScript,
-                List.of(waitingKey, enteredKey, enteredHeartbeatKey), // KEYS[1], KEYS[2], KEYS[3]
+                List.of(waitingKey, enteredKey, enteredHeartbeatKey, waitingHeartbeatKey),
                 String.valueOf(count),           // ARGV[1]
                 nowScore                         // ARGV[2]
         );

@@ -30,9 +30,13 @@ public class RoomService {
 
     private final String MEASUREMENT_ROOM_METRIC = "room_metric";
 
-    private long calculateMetricCounterBucket() {
-        long currentBucketStart = (System.currentTimeMillis() / 3000) * 3000;
+    static long calculateMetricCounterBucket(long now) {
+        long currentBucketStart = (now / 3000) * 3000;
         return currentBucketStart - 3000;
+    }
+
+    static long calculateMetricCollectionBucket(long now) {
+        return calculateMetricCounterBucket(now) - 3000;
     }
 
     public void relocateCustomers() {
@@ -59,7 +63,7 @@ public class RoomService {
 
             // ticket 추출
             long movedCount = roomRepository.moveTicketsToEntered(room.getRoomId(), nextCount);
-            long targetBucket = this.calculateMetricCounterBucket();
+            long targetBucket = calculateMetricCounterBucket(System.currentTimeMillis());
             roomRepository.increaseMetricCountBy(room.getRoomId(), WaitStatus.ENTERED, targetBucket, movedCount);
         }
     }
@@ -68,12 +72,12 @@ public class RoomService {
         long now = System.currentTimeMillis();
 
         long deadHeartbeatThreshold = now - 60000; // 2. 만료 기준 시간 (현재 시간 - 60초(60000ms))
-        long metricBucket = (now / 3000) * 3000; // metric counter bucket
-        long enteredQueueExpireTime = System.currentTimeMillis() - (86400_000L); // 1일
+        long metricBucket = calculateMetricCounterBucket(now);
+        long enteredQueueExpireTime = now - (86400_000L); // 1일
 
         var rooms = cachedRoomService.getAllRoomList();
 
-        var waitingHeartbeatThreshold = System.currentTimeMillis() - 60_000;
+        var waitingHeartbeatThreshold = now - 60_000;
         for (var room: rooms) {
             long deadHeartbeatCount = roomRepository.removeAndCountDeadEnteredHeartbeat(room.getRoomId(), deadHeartbeatThreshold);
             roomRepository.increaseMetricCountBy(room.getRoomId(), WaitStatus.EXITED, metricBucket, deadHeartbeatCount);
@@ -91,9 +95,9 @@ public class RoomService {
     // 3초에 한번 돌리는걸 가정
     public void recordRoomMetric3s() {
         long now = System.currentTimeMillis();
-        long currentBucketStart = (now / 3000) * 3000; // 1. Metric 측정 기준 시작시간. 3초 단위로 딱 떨어지도록 계산
-        long targetBucket = currentBucketStart - 3000; // 대시보드에는 직전에 완성된 3초 버킷 데이터를 제공
-        long countThreshold = currentBucketStart + 2999; // 이 시간 이전의 대기/활성 사용자수 측정 (totalWaiting, totalActive)
+        long completedBucketStart = calculateMetricCounterBucket(now);
+        long targetBucket = calculateMetricCollectionBucket(now); // 대시보드에는 직전에 완성된 3초 버킷 데이터를 제공
+        long countThreshold = completedBucketStart + 2999; // 완성된 버킷 종료 시점의 대기/활성 사용자수 측정
 
         var rooms = cachedRoomService.getAllRoomList();
         var updated = false;
@@ -119,7 +123,7 @@ public class RoomService {
             }
         }
         if (updated) {
-            roomRepository.updateRoomMetricVersion(currentBucketStart); // 버전 업데이트
+            roomRepository.updateRoomMetricVersion(completedBucketStart); // 버전 업데이트
         }
 
         influxService.writePointsAsync(influxBucket, influxOrganization, metricPoints);
