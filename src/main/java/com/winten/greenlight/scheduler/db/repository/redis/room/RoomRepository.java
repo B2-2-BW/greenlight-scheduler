@@ -198,6 +198,11 @@ public class RoomRepository {
         redisTemplate.opsForZSet().removeRangeByScore(key, 0, expireTime);
     }
 
+    /**
+     * 마지막 갱신 시각을 score로 사용하는 heartbeat ZSET에서 만료된 ticket ID를 제거하고 반환합니다.
+     * WAITING queue의 score는 대기열 진입 시각이므로 같은 threshold로 지울 수 없습니다.
+     * 따라서 반환된 ID 목록을 사용해 WAITING queue의 동일한 member를 별도로 제거합니다.
+     */
     public List<String> getAndRemoveExpiredWaitingHeartbeat(String roomId, long threshold) {
         var key = redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.WAITING);
 

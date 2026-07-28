@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +28,8 @@ public class RoomService {
     private String influxOrganization;
     @Value("${influxdb.bucket}")
     private String influxBucket;
+    @Value("${room.heartbeat-timeout}")
+    private Duration heartbeatTimeout;
 
     private final String MEASUREMENT_ROOM_METRIC = "room_metric";
 
@@ -71,20 +74,18 @@ public class RoomService {
     public void removeExpired() {
         long now = System.currentTimeMillis();
 
-        long deadHeartbeatThreshold = now - 60000; // 2. 만료 기준 시간 (현재 시간 - 60초(60000ms))
+        long heartbeatThreshold = now - heartbeatTimeout.toMillis();
         long metricBucket = calculateMetricCounterBucket(now);
         long enteredQueueExpireTime = now - (86400_000L); // 1일
 
         var rooms = cachedRoomService.getAllRoomList();
 
-        var waitingHeartbeatThreshold = now - 60_000;
         for (var room: rooms) {
-            long deadHeartbeatCount = roomRepository.removeAndCountDeadEnteredHeartbeat(room.getRoomId(), deadHeartbeatThreshold);
+            long deadHeartbeatCount = roomRepository.removeAndCountDeadEnteredHeartbeat(room.getRoomId(), heartbeatThreshold);
             roomRepository.increaseMetricCountBy(room.getRoomId(), WaitStatus.EXITED, metricBucket, deadHeartbeatCount);
             roomRepository.removeEnteredQueue(room.getRoomId(), enteredQueueExpireTime); // 1일 지난 queue:ENTERED 삭제
 
-            // 이 부분
-            List<String> expiredTicketList = roomRepository.getAndRemoveExpiredWaitingHeartbeat(room.getRoomId(), waitingHeartbeatThreshold);
+            List<String> expiredTicketList = roomRepository.getAndRemoveExpiredWaitingHeartbeat(room.getRoomId(), heartbeatThreshold);
             if (expiredTicketList != null && !expiredTicketList.isEmpty()) {
                 roomRepository.removeQueueBulk(room.getRoomId(), WaitStatus.WAITING, expiredTicketList);
                 roomRepository.increaseMetricCountBy(room.getRoomId(), WaitStatus.CANCELLED, metricBucket, expiredTicketList.size());

@@ -60,6 +60,10 @@ scheduler:
     METRIC: 3
     REMOVE_EXPIRED: 3
 
+room:
+  # WAITING/ENTERED heartbeat가 이 시간 동안 갱신되지 않으면 만료로 처리
+  heartbeat-timeout: 60s
+
 ---
 
 spring.config.activate.on-profile: local
