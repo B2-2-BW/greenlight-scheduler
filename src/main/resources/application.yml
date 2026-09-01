@@ -58,16 +58,21 @@ scheduler:
   delays:
     WAITING_TO_READY: 1
     METRIC: 3
-    REMOVE_EXPIRED: 3
+    REMOVE_EXPIRED: 5
+
+alertmanager:
+  token: ${ALERTMANAGER_TOKEN}
+
+admin:
+  api:
+    url: ${ADMIN_API_URL}
 
 ---
 
 spring.config.activate.on-profile: local
-
 ---
 
 spring.config.activate.on-profile: dev
-
 ---
 
 spring.config.activate.on-profile: live

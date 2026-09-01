@@ -1,11 +1,16 @@
 package com.winten.greenlight.scheduler.scheduler.v2;
 
-import com.winten.greenlight.scheduler.domain.scheduler.SchedulerStatus;
+import com.winten.greenlight.scheduler.client.AdminAlertClient;
+import com.winten.greenlight.scheduler.domain.alert.AlertName;
+import com.winten.greenlight.scheduler.domain.alert.AlertStatus;
 import com.winten.greenlight.scheduler.domain.scheduler.SchedulerCode;
+import com.winten.greenlight.scheduler.domain.scheduler.SchedulerStatus;
+import io.lettuce.core.RedisException;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.LocalDateTime;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -19,6 +24,8 @@ public class BaseScheduler {
 
     private final Runnable task;
 
+    private final AdminAlertClient adminAlertClient;
+
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
 
     @Getter @Setter
@@ -29,23 +36,25 @@ public class BaseScheduler {
 
     private ScheduledExecutorService executorService;
     private ScheduledFuture<?> scheduledTask;
-    private int errorCount;
+    private int errorCount = 0;
     private SchedulePolicy schedulePolicy;
+    private long alertLastSentAt = 0;
 
-    /**
-     * @param schedulerCode 스케줄러 타입 (Registry 등록용)
-     * @param delayProperties   딜레이 설정값 (초)
-     * @param task          실행할 비즈니스 로직
-     */
-    public BaseScheduler(SchedulerCode schedulerCode, SchedulerDelayProperties delayProperties, Runnable task) {
-        this(schedulerCode, delayProperties, task, SchedulePolicy.FIXED_DELAY);
-    }
-
-    public BaseScheduler(SchedulerCode schedulerCode, SchedulerDelayProperties delayProperties, Runnable task, SchedulePolicy schedulePolicy) {
+    public BaseScheduler(SchedulerCode schedulerCode,
+                         SchedulerDelayProperties delayProperties,
+                         Runnable task,
+                         SchedulePolicy schedulePolicy,
+                         AdminAlertClient adminAlertClient
+    ) {
+        if (schedulePolicy == SchedulePolicy.FIXED_RATE) {
+            // REDIS 오류 발생 시 thread sleep을 실행하게 되는데, 이 때 FIXED RATE로 실행할 경우 누적 실패가 발생하므로 일단 사용되지 않도록 조치
+            throw new IllegalArgumentException("SchedulePolicy.FIXED_RATE is not supported.");
+        }
         this.schedulerCode = schedulerCode;
         this.delayProperties = delayProperties;
         this.task = task;
         this.schedulePolicy = schedulePolicy;
+        this.adminAlertClient = adminAlertClient;
 
         // 초기화 시 Registry에 자동 등록
         SchedulerRegistry.register(this.schedulerCode, this);
@@ -121,12 +130,36 @@ public class BaseScheduler {
             task.run();
             errorCount = 0;
         } catch (Exception e) {
-            log.error("[{}] 로직 실행 실패", schedulerCode, e);
             errorCount += 1;
-            if (errorCount == 3) {
-                this.stop();
-                log.error("[{}] 작업 실패가 지속되어 스케줄러를 종료합니다.", schedulerCode);
+            long backoff = Math.min(errorCount * 3, 30);
+            if (e instanceof RedisException) {
+                log.warn("[{}] Redis 오류 연속 {}회 발생. {}초간 일시중단합니다. {}", schedulerCode, errorCount, backoff, e.toString());
+            } else {
+                log.error("[{}] 스케쥴러 연속 {}회 실패. {}초간 일시중단합니다.", schedulerCode, errorCount, backoff, e);
             }
+            long now = System.currentTimeMillis();
+            // 알람은 5분에 한번만 발송
+            if (errorCount > 3 && alertLastSentAt < now - 300_000) {
+                log.error("[{}] 스케쥴러 실패 알람 발송 {}.", schedulerCode, LocalDateTime.now());
+                String message = "스케쥴러 실행 연속 " + errorCount + "회 실패. lastError: " + e;
+                adminAlertClient.sendAlert(
+                        AlertName.SCHEDULER_FAILED,
+                        AlertStatus.FIRING,
+                        schedulerCode,
+                        "[" + schedulerCode + "] 스케쥴러 실행 실패",
+                        message
+                );
+                alertLastSentAt = now;
+            }
+            sleep(backoff);
+        }
+    }
+
+    private void sleep(long seconds) {
+        try {
+            Thread.sleep(seconds * 1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
