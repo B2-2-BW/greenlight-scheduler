@@ -74,4 +74,16 @@ public class RedisKeyBuilder {
     public String siteRoomId() {
         return prefix + ":site:roomId";
     }
+
+    public String alert(String fingerprint) {
+        return prefix + ":alert:" + fingerprint;
+    }
+
+    public String alertPattern() {
+        return prefix + ":alert:*";
+    }
+
+    public String alertPolicy(String siteId) {
+        return prefix + ":admin:alert_policy:" + siteId;
+    }
 }
