@@ -20,8 +20,7 @@ class AlertPolicyServiceTest {
         AlertPolicy policy = new AlertPolicyService(alertPolicyRepository).get("site-a");
 
         assertThat(policy.getForTicks()).isEqualTo(2);
-        assertThat(policy.getQueueMetric()).isEqualTo(QueueAlertMetric.WAITING);
-        assertThat(policy.getQueueThreshold()).isEqualTo(1d);
+        assertThat(policy.getWaitingThreshold()).isEqualTo(1d);
         assertThat(policy.getSurgeWaitTimeSeconds()).isEqualTo(60);
     }
 
@@ -30,9 +29,10 @@ class AlertPolicyServiceTest {
         AlertPolicy cached = AlertPolicy.builder()
                 .forTicks(4)
                 .repeatIntervalSeconds(90)
-                .queueMetric(QueueAlertMetric.ACTIVE)
-                .queueCompare(QueueAlertCompare.PERCENT)
-                .queueThreshold(25d)
+                .waitingCompare(QueueAlertCompare.COUNT)
+                .waitingThreshold(8d)
+                .activeCompare(QueueAlertCompare.PERCENT)
+                .activeThreshold(25d)
                 .surgeWaitTimeSeconds(15)
                 .build();
         when(alertPolicyRepository.find("site-a")).thenReturn(cached);
@@ -40,7 +40,7 @@ class AlertPolicyServiceTest {
         AlertPolicy policy = new AlertPolicyService(alertPolicyRepository).get("site-a");
 
         assertThat(policy.getForTicks()).isEqualTo(4);
-        assertThat(policy.getQueueMetric()).isEqualTo(QueueAlertMetric.ACTIVE);
+        assertThat(policy.getActiveCompare()).isEqualTo(QueueAlertCompare.PERCENT);
         assertThat(policy.getSurgeWaitTimeSeconds()).isEqualTo(15);
     }
 }

@@ -43,9 +43,18 @@ public class AlertDetector {
             Duration repeatInterval = Duration.ofSeconds(policy.getRepeatIntervalSeconds());
             pending.addAll(evaluateRule(
                     AlertName.QUEUE_WAIT,
-                    AlertThresholds.isQueueWait(policy, metric),
+                    AlertThresholds.isWaitingExceeded(policy, metric),
                     room,
                     annotations(AlertName.QUEUE_WAIT.name(), room, metric, now),
+                    now,
+                    forTicks,
+                    repeatInterval
+            ));
+            pending.addAll(evaluateRule(
+                    AlertName.ACTIVE_USERS,
+                    AlertThresholds.isActiveExceeded(policy, metric),
+                    room,
+                    annotations(AlertName.ACTIVE_USERS.name(), room, metric, now),
                     now,
                     forTicks,
                     repeatInterval
