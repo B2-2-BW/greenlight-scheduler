@@ -6,19 +6,25 @@ public final class AlertThresholds {
     private AlertThresholds() {
     }
 
-    public static boolean isQueueWait(AlertPolicy policy, RoomMetric metric) {
+    public static boolean isWaitingExceeded(AlertPolicy policy, RoomMetric metric) {
         if (policy == null || metric == null) {
             return false;
         }
-        long value = policy.getQueueMetric() == QueueAlertMetric.ACTIVE
-                ? metric.getTotalActive()
-                : metric.getTotalWaiting();
-        Double threshold = policy.getQueueThreshold();
+        return isExceeded(policy.getWaitingCompare(), policy.getWaitingThreshold(), metric.getTotalWaiting(), metric.getRoomCapacity());
+    }
+
+    public static boolean isActiveExceeded(AlertPolicy policy, RoomMetric metric) {
+        if (policy == null || metric == null) {
+            return false;
+        }
+        return isExceeded(policy.getActiveCompare(), policy.getActiveThreshold(), metric.getTotalActive(), metric.getRoomCapacity());
+    }
+
+    private static boolean isExceeded(QueueAlertCompare compare, Double threshold, long value, int capacity) {
         if (threshold == null || threshold <= 0) {
             return false;
         }
-        if (policy.getQueueCompare() == QueueAlertCompare.PERCENT) {
-            int capacity = metric.getRoomCapacity();
+        if (compare == QueueAlertCompare.PERCENT) {
             if (capacity <= 0) {
                 return false;
             }
@@ -35,10 +41,6 @@ public final class AlertThresholds {
         if (limitSeconds < 1) {
             return false;
         }
-        long estimatedWaitTime = metric.getEstimatedWaitTime();
-        if (estimatedWaitTime < 0) {
-            return true;
-        }
-        return estimatedWaitTime >= limitSeconds;
+        return metric.getEstimatedWaitTime() >= limitSeconds;
     }
 }

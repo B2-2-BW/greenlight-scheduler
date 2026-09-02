@@ -12,18 +12,20 @@ import lombok.NoArgsConstructor;
 public class AlertPolicy {
     private int forTicks;
     private int repeatIntervalSeconds;
-    private QueueAlertMetric queueMetric;
-    private QueueAlertCompare queueCompare;
-    private Double queueThreshold;
+    private QueueAlertCompare waitingCompare;
+    private Double waitingThreshold;
+    private QueueAlertCompare activeCompare;
+    private Double activeThreshold;
     private int surgeWaitTimeSeconds;
 
     public static AlertPolicy defaults() {
         return AlertPolicy.builder()
                 .forTicks(2)
                 .repeatIntervalSeconds(3600)
-                .queueMetric(QueueAlertMetric.WAITING)
-                .queueCompare(QueueAlertCompare.COUNT)
-                .queueThreshold(1d)
+                .waitingCompare(QueueAlertCompare.COUNT)
+                .waitingThreshold(1d)
+                .activeCompare(QueueAlertCompare.COUNT)
+                .activeThreshold(1d)
                 .surgeWaitTimeSeconds(60)
                 .build();
     }
@@ -31,10 +33,12 @@ public class AlertPolicy {
     public boolean isUsable() {
         return forTicks >= 1
                 && repeatIntervalSeconds >= 1
-                && queueMetric != null
-                && queueCompare != null
-                && queueThreshold != null
-                && queueThreshold > 0
-                && surgeWaitTimeSeconds >= 1;
+                && surgeWaitTimeSeconds >= 1
+                && waitingCompare != null
+                && waitingThreshold != null
+                && waitingThreshold > 0
+                && activeCompare != null
+                && activeThreshold != null
+                && activeThreshold > 0;
     }
 }
