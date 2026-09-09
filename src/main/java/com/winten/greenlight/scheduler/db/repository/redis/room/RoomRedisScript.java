@@ -69,9 +69,9 @@ end
     """, Long.class);
 
     private final RedisScript<List> getAndRemoveExpiredWaitingHeartbeatRedisScript = RedisScript.of("""
-        local members = redis.call('ZRANGEBYSCORE', KEYS[1], 0, ARGV[1])
+        local members = redis.call('ZRANGEBYSCORE', KEYS[1], 0, ARGV[1], 'LIMIT', 0, ARGV[2])
         if #members > 0 then
-            redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, ARGV[1])
+            redis.call('ZREM', KEYS[1], unpack(members))
         end
         return members
     """, List.class);

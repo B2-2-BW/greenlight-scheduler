@@ -29,6 +29,8 @@ public class RoomService {
     private String influxBucket;
 
     private final String MEASUREMENT_ROOM_METRIC = "room_metric";
+    private static final int EXPIRED_WAITING_CHUNK_SIZE = 1_000;
+    private static final int EXPIRED_WAITING_MAX_CHUNKS = 5;
 
     static long calculateMetricCounterBucket(long now) {
         long currentBucketStart = (now / 3000) * 3000;
@@ -83,11 +85,20 @@ public class RoomService {
             roomRepository.increaseMetricCountBy(room.getRoomId(), WaitStatus.EXITED, metricBucket, deadHeartbeatCount);
             roomRepository.removeEnteredQueue(room.getRoomId(), enteredQueueExpireTime); // 1일 지난 queue:ENTERED 삭제
 
-            // 이 부분
-            List<String> expiredTicketList = roomRepository.getAndRemoveExpiredWaitingHeartbeat(room.getRoomId(), waitingHeartbeatThreshold);
-            if (expiredTicketList != null && !expiredTicketList.isEmpty()) {
+            for (int i = 0; i < EXPIRED_WAITING_MAX_CHUNKS; i++) {
+                List<String> expiredTicketList = roomRepository.getAndRemoveExpiredWaitingHeartbeat(
+                        room.getRoomId(),
+                        waitingHeartbeatThreshold,
+                        EXPIRED_WAITING_CHUNK_SIZE
+                );
+                if (expiredTicketList == null || expiredTicketList.isEmpty()) {
+                    break;
+                }
                 roomRepository.removeQueueBulk(room.getRoomId(), WaitStatus.WAITING, expiredTicketList);
                 roomRepository.increaseMetricCountBy(room.getRoomId(), WaitStatus.CANCELLED, metricBucket, expiredTicketList.size());
+                if (expiredTicketList.size() < EXPIRED_WAITING_CHUNK_SIZE) {
+                    break;
+                }
             }
         }
     }

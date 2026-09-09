@@ -195,13 +195,14 @@ public class RoomRepository {
         redisTemplate.opsForZSet().removeRangeByScore(key, 0, expireTime);
     }
 
-    public List<String> getAndRemoveExpiredWaitingHeartbeat(String roomId, long threshold) {
+    public List<String> getAndRemoveExpiredWaitingHeartbeat(String roomId, long threshold, int limit) {
         var key = redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.WAITING);
 
         return redisTemplate.execute(
                 roomRedisScript.getGetAndRemoveExpiredWaitingHeartbeatRedisScript(),
                 List.of(key),
-                String.valueOf(threshold)
+                String.valueOf(threshold),
+                String.valueOf(limit)
         );
     }
 
