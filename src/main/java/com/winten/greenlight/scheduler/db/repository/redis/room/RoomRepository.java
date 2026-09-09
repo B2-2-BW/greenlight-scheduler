@@ -112,12 +112,10 @@ public class RoomRepository {
      * </ul>
      * @param roomId 대기열 ID
      * @param targetBucket 3초동안 대기, 입장, 이탈량이 기록된 Time bucket id
-     * @param countThreshold 이 시간 이전의 대기/활성 사용자수 측정 (totalWaiting, totalActive)
      */
     public RoomMetric calculateRoomMetric(
             String roomId,
-            long targetBucket,
-            long countThreshold
+            long targetBucket
     ) {
         List<String> keys = new ArrayList<>();
         // 1~5번 키: 대기, 활성, 증분 데이터 키
@@ -136,8 +134,7 @@ public class RoomRepository {
         @SuppressWarnings("unchecked")
         List<Long> result = (List<Long>) redisTemplate.execute(
             roomRedisScript.getRoomMetricCalculationScript(),
-            keys,
-            String.valueOf(countThreshold)
+            keys
         );
 
         var metric = RoomMetric.builder()
@@ -198,13 +195,14 @@ public class RoomRepository {
         redisTemplate.opsForZSet().removeRangeByScore(key, 0, expireTime);
     }
 
-    public List<String> getAndRemoveExpiredWaitingHeartbeat(String roomId, long threshold) {
+    public List<String> getAndRemoveExpiredWaitingHeartbeat(String roomId, long threshold, int limit) {
         var key = redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.WAITING);
 
         return redisTemplate.execute(
                 roomRedisScript.getGetAndRemoveExpiredWaitingHeartbeatRedisScript(),
                 List.of(key),
-                String.valueOf(threshold)
+                String.valueOf(threshold),
+                String.valueOf(limit)
         );
     }
 

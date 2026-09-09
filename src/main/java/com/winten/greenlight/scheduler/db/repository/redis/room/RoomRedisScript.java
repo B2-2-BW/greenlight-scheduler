@@ -1,8 +1,6 @@
 package com.winten.greenlight.scheduler.db.repository.redis.room;
 
 import lombok.Getter;
-import org.jspecify.annotations.NonNull;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
@@ -27,11 +25,9 @@ end
 """, Long.class);
 
     private final RedisScript<List> roomMetricCalculationScript = RedisScript.of("""
-        local countThreshold = tonumber(ARGV[1])
-
-        -- 1. 대기/활성 데이터 계산
-        local totalWaiting = redis.call('ZCOUNT', KEYS[1], '-inf', countThreshold)
-        local totalActive = redis.call('ZCOUNT', KEYS[2], '-inf', countThreshold)
+        -- 1. 대기/활성 데이터 계산 (현재 ZSET 크기. 3초 버킷 스냅샷이 아님)
+        local totalWaiting = redis.call('ZCARD', KEYS[1])
+        local totalActive = redis.call('ZCARD', KEYS[2])
 
         -- 2. 3초 구간 유입/입장/이탈 데이터 조회
         local waitingIncr = tonumber(redis.call('GET', KEYS[3]) or '0')
@@ -73,9 +69,9 @@ end
     """, Long.class);
 
     private final RedisScript<List> getAndRemoveExpiredWaitingHeartbeatRedisScript = RedisScript.of("""
-        local members = redis.call('ZRANGEBYSCORE', KEYS[1], 0, ARGV[1])
+        local members = redis.call('ZRANGEBYSCORE', KEYS[1], 0, ARGV[1], 'LIMIT', 0, ARGV[2])
         if #members > 0 then
-            redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, ARGV[1])
+            redis.call('ZREM', KEYS[1], unpack(members))
         end
         return members
     """, List.class);

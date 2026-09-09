@@ -31,6 +31,8 @@ public class RoomService {
     private String influxBucket;
 
     private final String MEASUREMENT_ROOM_METRIC = "room_metric";
+    private static final int EXPIRED_WAITING_CHUNK_SIZE = 1_000;
+    private static final int EXPIRED_WAITING_MAX_CHUNKS = 5;
 
     static long calculateMetricCounterBucket(long now) {
         long currentBucketStart = (now / 3000) * 3000;
@@ -85,11 +87,20 @@ public class RoomService {
             roomRepository.increaseMetricCountBy(room.getRoomId(), WaitStatus.EXITED, metricBucket, deadHeartbeatCount);
             roomRepository.removeEnteredQueue(room.getRoomId(), enteredQueueExpireTime); // 1일 지난 queue:ENTERED 삭제
 
-            // 이 부분
-            List<String> expiredTicketList = roomRepository.getAndRemoveExpiredWaitingHeartbeat(room.getRoomId(), waitingHeartbeatThreshold);
-            if (expiredTicketList != null && !expiredTicketList.isEmpty()) {
+            for (int i = 0; i < EXPIRED_WAITING_MAX_CHUNKS; i++) {
+                List<String> expiredTicketList = roomRepository.getAndRemoveExpiredWaitingHeartbeat(
+                        room.getRoomId(),
+                        waitingHeartbeatThreshold,
+                        EXPIRED_WAITING_CHUNK_SIZE
+                );
+                if (expiredTicketList == null || expiredTicketList.isEmpty()) {
+                    break;
+                }
                 roomRepository.removeQueueBulk(room.getRoomId(), WaitStatus.WAITING, expiredTicketList);
                 roomRepository.increaseMetricCountBy(room.getRoomId(), WaitStatus.CANCELLED, metricBucket, expiredTicketList.size());
+                if (expiredTicketList.size() < EXPIRED_WAITING_CHUNK_SIZE) {
+                    break;
+                }
             }
         }
     }
@@ -99,7 +110,6 @@ public class RoomService {
         long now = System.currentTimeMillis();
         long completedBucketStart = calculateMetricCounterBucket(now);
         long targetBucket = calculateMetricCollectionBucket(now); // 대시보드에는 직전에 완성된 3초 버킷 데이터를 제공
-        long countThreshold = completedBucketStart + 2999; // 완성된 버킷 종료 시점의 대기/활성 사용자수 측정
 
         var rooms = cachedRoomService.getAllRoomList();
         var updated = false;
@@ -112,8 +122,7 @@ public class RoomService {
             }
             var metric = roomRepository.calculateRoomMetric(
                     room.getRoomId(),
-                    targetBucket,
-                    countThreshold
+                    targetBucket
             );
             metric.setRoomCapacity(room.getCapacity());
             long estimatedWaitTime = calculateEstimatedWaitTime(room.getCapacity(), metric.getTotalActive(), metric.getTotalWaiting(), metric.getRecentlyExited());
