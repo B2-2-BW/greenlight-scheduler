@@ -11,17 +11,24 @@ import java.util.List;
 public class RoomRedisScript {
     private final RedisScript<Long> moveTicketRedisScript = RedisScript.of("""
 local members = redis.call('ZRANGE', KEYS[1], 0, ARGV[1] - 1)
-if #members > 0 then
-    redis.call('ZREM', KEYS[1], unpack(members))
-    redis.call('ZREM', KEYS[4], unpack(members))
-    for _, member in ipairs(members) do
-        redis.call('ZADD', KEYS[2], ARGV[2], member)
-        redis.call('ZADD', KEYS[3], ARGV[2], member)
-    end
-    return #members
-else
+if #members == 0 then
     return 0
 end
+
+redis.call('ZREM', KEYS[1], unpack(members))
+redis.call('ZREM', KEYS[4], unpack(members))
+
+local enteredQueue = {KEYS[2]}
+local enteredHeartbeat = {KEYS[3]}
+for i = 1, #members do
+    enteredQueue[#enteredQueue + 1] = ARGV[2]
+    enteredQueue[#enteredQueue + 1] = members[i]
+    enteredHeartbeat[#enteredHeartbeat + 1] = ARGV[2]
+    enteredHeartbeat[#enteredHeartbeat + 1] = members[i]
+end
+redis.call('ZADD', unpack(enteredQueue))
+redis.call('ZADD', unpack(enteredHeartbeat))
+return #members
 """, Long.class);
 
     private final RedisScript<List> roomMetricCalculationScript = RedisScript.of("""

@@ -31,6 +31,12 @@ public class RoomService {
     private final String MEASUREMENT_ROOM_METRIC = "room_metric";
     private static final int EXPIRED_WAITING_CHUNK_SIZE = 1_000;
     private static final int EXPIRED_WAITING_MAX_CHUNKS = 5;
+    /**
+     * 승격 Lua 한 방이 메인 스레드를 오래 잡지 않도록 하는 상한.
+     * 1초 입장량은 maxTrafficPerSecond가 정하고, EVAL 크기는 이 값이 정한다.
+     * Lua unpack 한도(~8000) 안에서 ZADD 인자 1+2N 이 들어가도록 1000으로 둔다.
+     */
+    static final int MOVE_TICKET_CHUNK_SIZE = 1_000;
 
     static long calculateMetricCounterBucket(long now) {
         long currentBucketStart = (now / 3000) * 3000;
@@ -63,8 +69,20 @@ public class RoomService {
                 continue; // 입장 불가능한 상태라면 스킵 (room 포화상태)
             }
 
-            // ticket 추출
-            long movedCount = roomRepository.moveTicketsToEntered(room.getRoomId(), nextCount);
+            long movedCount = 0;
+            long remaining = nextCount;
+            while (remaining > 0) {
+                long chunk = Math.min(remaining, MOVE_TICKET_CHUNK_SIZE);
+                Long moved = roomRepository.moveTicketsToEntered(room.getRoomId(), chunk);
+                if (moved == null || moved <= 0) {
+                    break;
+                }
+                movedCount += moved;
+                remaining -= moved;
+                if (moved < chunk) {
+                    break;
+                }
+            }
             long targetBucket = calculateMetricCounterBucket(System.currentTimeMillis());
             roomRepository.increaseMetricCountBy(room.getRoomId(), WaitStatus.ENTERED, targetBucket, movedCount);
         }
