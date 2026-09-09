@@ -97,7 +97,6 @@ public class RoomService {
         long now = System.currentTimeMillis();
         long completedBucketStart = calculateMetricCounterBucket(now);
         long targetBucket = calculateMetricCollectionBucket(now); // 대시보드에는 직전에 완성된 3초 버킷 데이터를 제공
-        long countThreshold = completedBucketStart + 2999; // 완성된 버킷 종료 시점의 대기/활성 사용자수 측정
 
         var rooms = cachedRoomService.getAllRoomList();
         var updated = false;
@@ -108,8 +107,7 @@ public class RoomService {
             }
             var metric = roomRepository.calculateRoomMetric(
                     room.getRoomId(),
-                    targetBucket,
-                    countThreshold
+                    targetBucket
             );
             metric.setRoomCapacity(room.getCapacity());
             long estimatedWaitTime = calculateEstimatedWaitTime(room.getCapacity(), metric.getTotalActive(), metric.getTotalWaiting(), metric.getRecentlyExited());
