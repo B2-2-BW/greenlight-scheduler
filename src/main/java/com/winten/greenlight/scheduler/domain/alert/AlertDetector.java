@@ -1,6 +1,7 @@
 package com.winten.greenlight.scheduler.domain.alert;
 
 import com.winten.greenlight.scheduler.client.AdminAlertClient;
+import com.winten.greenlight.scheduler.db.repository.redis.room.RoomRepository;
 import com.winten.greenlight.scheduler.domain.room.Room;
 import com.winten.greenlight.scheduler.domain.room.RoomEnvironment;
 import com.winten.greenlight.scheduler.domain.room.RoomMetric;
@@ -24,12 +25,14 @@ public class AlertDetector {
     private final AlertStateStore alertStateStore;
     private final AdminAlertClient adminAlertClient;
     private final AlertPolicyService alertPolicyService;
+    private final RoomRepository roomRepository;
 
     public void evaluate(List<Room> rooms, List<RoomMetric> metrics) {
         Instant now = Instant.now();
         List<Pending> pending = new ArrayList<>();
         Set<String> seenRoomIds = new HashSet<>();
         Map<String, AlertPolicy> policies = new LinkedHashMap<>();
+        Map<String, String> siteNames = new LinkedHashMap<>();
 
         for (int i = 0; i < rooms.size(); i++) {
             Room room = rooms.get(i);
@@ -41,11 +44,12 @@ public class AlertDetector {
             AlertPolicy policy = policyFor(policies, room.getSiteId());
             int forTicks = policy.getForTicks();
             Duration repeatInterval = Duration.ofSeconds(policy.getRepeatIntervalSeconds());
+            String siteName = siteNames.computeIfAbsent(room.getSiteId(), this::siteName);
             pending.addAll(evaluateRule(
                     AlertName.QUEUE_WAIT,
                     AlertThresholds.isWaitingExceeded(policy, metric),
                     room,
-                    annotations(AlertName.QUEUE_WAIT.name(), room, metric, now),
+                    annotations(AlertName.QUEUE_WAIT.name(), room, siteName, metric, now),
                     now,
                     forTicks,
                     repeatInterval
@@ -54,7 +58,7 @@ public class AlertDetector {
                     AlertName.ACTIVE_USERS,
                     AlertThresholds.isActiveExceeded(policy, metric),
                     room,
-                    annotations(AlertName.ACTIVE_USERS.name(), room, metric, now),
+                    annotations(AlertName.ACTIVE_USERS.name(), room, siteName, metric, now),
                     now,
                     forTicks,
                     repeatInterval
@@ -63,7 +67,7 @@ public class AlertDetector {
                     AlertName.VISITOR_SURGE,
                     AlertThresholds.isWaitTimeExceeded(policy, metric),
                     room,
-                    annotations(AlertName.VISITOR_SURGE.name(), room, metric, now),
+                    annotations(AlertName.VISITOR_SURGE.name(), room, siteName, metric, now),
                     now,
                     forTicks,
                     repeatInterval
@@ -79,8 +83,10 @@ public class AlertDetector {
             }
             AlertPolicy policy = policyFor(policies, state.getSiteId());
             Map<String, String> labels = labels(state.getAlertname(), state.getSiteId(), state.getRoomId());
+            String siteName = siteNames.computeIfAbsent(state.getSiteId(), this::siteName);
             Map<String, String> annotations = Map.of(
-                    "summary", state.getAlertname() + " resolved: room disabled " + state.getRoomId(),
+                    "summary", "대기열이 비활성화되어 해제되었습니다.",
+                    "description", namedId(siteName, state.getSiteId()) + " / " + state.getRoomId(),
                     "occurred_at", now.toString()
             );
             AlertEvaluator.evaluate(
@@ -169,17 +175,34 @@ public class AlertDetector {
         return labels;
     }
 
-    private Map<String, String> annotations(String alertname, Room room, RoomMetric metric, Instant now) {
+    private Map<String, String> annotations(String alertname, Room room, String siteName, RoomMetric metric, Instant now) {
+        String place = namedId(siteName, room.getSiteId()) + " / " + namedId(room.getName(), room.getRoomId());
         Map<String, String> annotations = new LinkedHashMap<>();
-        annotations.put("summary", alertname + ": " + room.getName());
-        annotations.put("description",
-                "room_id=" + room.getRoomId()
-                        + " totalWaiting=" + metric.getTotalWaiting()
-                        + " totalActive=" + metric.getTotalActive()
-                        + " estimatedWaitTime=" + metric.getEstimatedWaitTime()
-                        + " roomCapacity=" + metric.getRoomCapacity());
+        annotations.put("summary", place + " 대기 발생");
+        annotations.put("description", " 대기 " + metric.getTotalWaiting() + "명"
+                        + ", 체류 " + metric.getTotalActive() + "명"
+                        + ", 대기시간 " + metric.getEstimatedWaitTime() + "초");
         annotations.put("occurred_at", now.toString());
         return annotations;
+    }
+
+    private String siteName(String siteId) {
+        try {
+            return roomRepository.findSiteName(siteId);
+        } catch (Exception exception) {
+            log.warn("site name redis read failed. siteId={}", siteId, exception);
+            return null;
+        }
+    }
+
+    static String namedId(String name, String id) {
+        if (name == null || name.isBlank()) {
+            return id == null ? "" : id;
+        }
+        if (id == null || id.isBlank() || name.equals(id)) {
+            return name;
+        }
+        return name + " (" + id + ")";
     }
 
     private record Pending(AlertEvaluator.Decision decision, AlertState previous) {

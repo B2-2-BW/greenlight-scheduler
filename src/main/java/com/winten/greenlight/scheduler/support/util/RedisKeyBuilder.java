@@ -86,4 +86,8 @@ public class RedisKeyBuilder {
     public String alertPolicy(String siteId) {
         return prefix + ":admin:alert_policy:" + siteId;
     }
+
+    public String siteInfoMeta(String siteId) {
+        return prefix + ":site:" + siteId + ":meta";
+    }
 }

@@ -72,6 +72,18 @@ public class RoomRepository {
         return rooms;
     }
 
+    public String findSiteName(String siteId) {
+        if (siteId == null || siteId.isBlank()) {
+            return null;
+        }
+        Object value = jsonRedisTemplate.opsForHash().get(redisKeyBuilder.siteInfoMeta(siteId), "siteName");
+        if (value == null) {
+            return null;
+        }
+        String name = value.toString().trim();
+        return name.isEmpty() ? null : name;
+    }
+
     public long countEnteredCustomersByRoomId(String roomId) {
         var key = redisKeyBuilder.roomHeartbeat(roomId, WaitStatus.ENTERED);
         Long count = redisTemplate.opsForZSet().size(key);
