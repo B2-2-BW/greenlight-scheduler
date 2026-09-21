@@ -60,12 +60,12 @@ scheduler:
     METRIC: 3
     REMOVE_EXPIRED: 3
 
-alertmanager:
-  token: ${ALERTMANAGER_TOKEN}
-
 admin:
   api:
     url: ${ADMIN_API_URL}
+  alert:
+    webhook:
+      token: ${ADMIN_ALERT_WEBHOOK_TOKEN}
 
 ---
 

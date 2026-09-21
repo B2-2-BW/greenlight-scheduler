@@ -37,6 +37,7 @@ public class BaseScheduler {
     private ScheduledExecutorService executorService;
     private ScheduledFuture<?> scheduledTask;
     private int errorCount = 0;
+    private boolean failureAlertSent = false;
     private SchedulePolicy schedulePolicy;
     private long alertLastSentAt = 0;
 
@@ -128,6 +129,17 @@ public class BaseScheduler {
     private void safeExecute() {
         try {
             task.run();
+            if (failureAlertSent) {
+                adminAlertClient.sendAlert(
+                        AlertName.SCHEDULER_FAILED,
+                        AlertStatus.RESOLVED,
+                        schedulerCode,
+                        "[" + schedulerCode + "] 스케쥴러 복구",
+                        "스케쥴러 작업이 다시 성공했습니다."
+                );
+                failureAlertSent = false;
+                alertLastSentAt = 0;
+            }
             errorCount = 0;
         } catch (Exception e) {
             errorCount += 1;
@@ -150,6 +162,7 @@ public class BaseScheduler {
                         message
                 );
                 alertLastSentAt = now;
+                failureAlertSent = true;
             }
             sleep(backoff);
         }
