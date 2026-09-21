@@ -1,5 +1,6 @@
 package com.winten.greenlight.scheduler.scheduler.v2;
 
+import com.winten.greenlight.scheduler.domain.alert.SchedulerAlertClient;
 import com.winten.greenlight.scheduler.domain.room.RoomService;
 import com.winten.greenlight.scheduler.domain.scheduler.SchedulerCode;
 import lombok.RequiredArgsConstructor;
@@ -12,34 +13,38 @@ public class SchedulerConfig {
 
     private final RoomService roomService;
     private final SchedulerDelayProperties delayProperties;
+    private final SchedulerAlertClient schedulerAlertClient;
 
-    @Bean(initMethod = "start", destroyMethod = "stop")
+    @Bean(initMethod = "start", destroyMethod = "stopQuietly")
     public BaseScheduler metricScheduler() {
         return new BaseScheduler(
                 SchedulerCode.METRIC,
                 delayProperties,
                 roomService::recordRoomMetric3s,
-                SchedulePolicy.FIXED_RATE
+                SchedulePolicy.FIXED_RATE,
+                schedulerAlertClient
         );
     }
 
-    @Bean(initMethod = "start", destroyMethod = "stop")
+    @Bean(initMethod = "start", destroyMethod = "stopQuietly")
     public BaseScheduler waitingToReadyScheduler() {
         return new BaseScheduler(
                 SchedulerCode.WAITING_TO_READY,
                 delayProperties,
                 roomService::relocateCustomers,
-                SchedulePolicy.FIXED_DELAY
+                SchedulePolicy.FIXED_DELAY,
+                schedulerAlertClient
         );
     }
 
-    @Bean(initMethod = "start", destroyMethod = "stop")
+    @Bean(initMethod = "start", destroyMethod = "stopQuietly")
     public BaseScheduler removeExpiredScheduler() {
         return new BaseScheduler(
                 SchedulerCode.REMOVE_EXPIRED,
                 delayProperties,
                 roomService::removeExpired,
-                SchedulePolicy.FIXED_RATE
+                SchedulePolicy.FIXED_RATE,
+                schedulerAlertClient
         );
     }
 }

@@ -1,5 +1,6 @@
 package com.winten.greenlight.scheduler.scheduler.v2;
 
+import com.winten.greenlight.scheduler.domain.alert.SchedulerAlertClient;
 import com.winten.greenlight.scheduler.domain.scheduler.SchedulerStatus;
 import com.winten.greenlight.scheduler.domain.scheduler.SchedulerCode;
 import lombok.Getter;
@@ -11,6 +12,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public class BaseScheduler {
+    static final int FAILURE_ALERT_THRESHOLD = 3;
+    static final long ERROR_LOG_INTERVAL_MS = 30_000;
 
     @Getter
     private final SchedulerCode schedulerCode;
@@ -18,8 +21,10 @@ public class BaseScheduler {
     private final SchedulerDelayProperties delayProperties;
 
     private final Runnable task;
+    private final SchedulerAlertClient alertClient;
 
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
+    private final AtomicBoolean inFlight = new AtomicBoolean(false);
 
     @Getter @Setter
     private String name;
@@ -30,6 +35,9 @@ public class BaseScheduler {
     private ScheduledExecutorService executorService;
     private ScheduledFuture<?> scheduledTask;
     private int errorCount;
+    private boolean failureAlertSent;
+    private boolean stoppedAlertSent;
+    private long lastErrorLogAt;
     private SchedulePolicy schedulePolicy;
 
     /**
@@ -38,14 +46,25 @@ public class BaseScheduler {
      * @param task          실행할 비즈니스 로직
      */
     public BaseScheduler(SchedulerCode schedulerCode, SchedulerDelayProperties delayProperties, Runnable task) {
-        this(schedulerCode, delayProperties, task, SchedulePolicy.FIXED_DELAY);
+        this(schedulerCode, delayProperties, task, SchedulePolicy.FIXED_DELAY, null);
     }
 
     public BaseScheduler(SchedulerCode schedulerCode, SchedulerDelayProperties delayProperties, Runnable task, SchedulePolicy schedulePolicy) {
+        this(schedulerCode, delayProperties, task, schedulePolicy, null);
+    }
+
+    public BaseScheduler(
+            SchedulerCode schedulerCode,
+            SchedulerDelayProperties delayProperties,
+            Runnable task,
+            SchedulePolicy schedulePolicy,
+            SchedulerAlertClient alertClient
+    ) {
         this.schedulerCode = schedulerCode;
         this.delayProperties = delayProperties;
         this.task = task;
         this.schedulePolicy = schedulePolicy;
+        this.alertClient = alertClient;
 
         // 초기화 시 Registry에 자동 등록
         SchedulerRegistry.register(this.schedulerCode, this);
@@ -84,9 +103,21 @@ public class BaseScheduler {
         errorCount = 0;
         isRunning.set(true);
         log.info("[{}] 스케쥴러 시작 완료", schedulerCode);
+        if (stoppedAlertSent) {
+            sendAlert("SCHEDULER_STOPPED", false, "스케줄러 기동: " + schedulerCode, "스케줄러가 시작되었습니다.");
+            stoppedAlertSent = false;
+        }
     }
 
     public synchronized void stop() {
+        stopInternal(true);
+    }
+
+    public synchronized void stopQuietly() {
+        stopInternal(false);
+    }
+
+    private void stopInternal(boolean notify) {
         if (!isRunning.get() || executorService == null) {
             return;
         }
@@ -108,6 +139,10 @@ public class BaseScheduler {
             log.info("[{}] 스케쥴러 중단 완료", schedulerCode);
             isRunning.set(false);
             scheduledTask = null;
+            if (notify) {
+                sendAlert("SCHEDULER_STOPPED", true, "스케줄러 중단: " + schedulerCode, "스케줄러가 중단되었습니다.");
+                stoppedAlertSent = true;
+            }
         }
     }
 
@@ -115,19 +150,50 @@ public class BaseScheduler {
         return isRunning.get();
     }
 
-    // 예외가 발생하더라도 스케줄러가 죽지 않도록 방어 로직 추가
     private void safeExecute() {
+        if (!inFlight.compareAndSet(false, true)) {
+            log.debug("[{}] skip overlapping tick", schedulerCode);
+            return;
+        }
         try {
             task.run();
             errorCount = 0;
-        } catch (Exception e) {
-            log.error("[{}] 로직 실행 실패", schedulerCode, e);
-            errorCount += 1;
-            if (errorCount == 3) {
-                this.stop();
-                log.error("[{}] 작업 실패가 지속되어 스케줄러를 종료합니다.", schedulerCode);
+            lastErrorLogAt = 0;
+            if (failureAlertSent) {
+                sendAlert(
+                        "SCHEDULER_FAILED",
+                        false,
+                        "스케줄러 복구: " + schedulerCode,
+                        "연속 실패 이후 작업이 다시 성공했습니다."
+                );
+                failureAlertSent = false;
             }
+        } catch (Exception e) {
+            errorCount += 1;
+            long now = System.currentTimeMillis();
+            if (lastErrorLogAt == 0 || now - lastErrorLogAt >= ERROR_LOG_INTERVAL_MS) {
+                log.error("[{}] 로직 실행 실패 consecutive={}", schedulerCode, errorCount, e);
+                lastErrorLogAt = now;
+            }
+            if (errorCount >= FAILURE_ALERT_THRESHOLD && !failureAlertSent) {
+                sendAlert(
+                        "SCHEDULER_FAILED",
+                        true,
+                        "스케줄러 실패: " + schedulerCode,
+                        "연속 " + errorCount + "회 실패. 스케줄러는 재시도 중. " + e.getMessage()
+                );
+                failureAlertSent = true;
+            }
+        } finally {
+            inFlight.set(false);
         }
+    }
+
+    private void sendAlert(String alertname, boolean firing, String summary, String description) {
+        if (alertClient == null) {
+            return;
+        }
+        alertClient.send(alertname, schedulerCode.name(), firing, summary, description);
     }
 
     public SchedulerStatus status() {

@@ -76,7 +76,7 @@ public class SchedulerService {
 
     public void restart(final SchedulerCode schedulerCode) {
         var scheduler = SchedulerRegistry.get(schedulerCode);
-        scheduler.stop();
+        scheduler.stopQuietly();
         scheduler.start();
     }
 }

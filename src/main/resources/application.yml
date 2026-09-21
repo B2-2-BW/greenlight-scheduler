@@ -60,6 +60,13 @@ scheduler:
     METRIC: 3
     REMOVE_EXPIRED: 3
 
+admin:
+  api:
+    url: ${ADMIN_API_URL:}
+  alert:
+    webhook:
+      token: ${ADMIN_ALERT_WEBHOOK_TOKEN:}
+
 ---
 
 spring.config.activate.on-profile: local
