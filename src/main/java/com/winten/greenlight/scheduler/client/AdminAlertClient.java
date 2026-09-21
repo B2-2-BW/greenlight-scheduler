@@ -27,8 +27,8 @@ public class AdminAlertClient {
 
     private final RestClient adminApiRestClient;
 
-    @Value("${alertmanager.token}")
-    private String alertmanagerToken;
+    @Value("${admin.alert.webhook.token}")
+    private String adminAlertWebhookToken;
 
     @Value("${spring.application.name}")
     private String applicationName;
@@ -102,7 +102,7 @@ public class AdminAlertClient {
     private void post(List<AlertPayload> alerts) {
         adminApiRestClient.post()
                 .uri(ALERT_PATH)
-                .header("X-Alert-Token", alertmanagerToken)
+                .header("X-ALERT-TOKEN", adminAlertWebhookToken)
                 .body(new AlertWebhookRequest(createdBy(), alerts))
                 .retrieve()
                 .toBodilessEntity();
