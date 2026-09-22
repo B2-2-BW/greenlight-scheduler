@@ -151,8 +151,8 @@ public class BaseScheduler {
                         AlertName.SCHEDULER_FAILED,
                         AlertStatus.RESOLVED,
                         schedulerCode,
-                        "[" + schedulerCode + "] 스케쥴러 복구",
-                        "스케쥴러 작업이 다시 성공했습니다."
+                        "스케쥴러 실행",
+                        "스케쥴러: " + schedulerCode + " 실행"
                 );
                 failureAlertSent = false;
                 alertLastSentAt = 0;
@@ -170,19 +170,26 @@ public class BaseScheduler {
             // 알람은 1시간에 한번만 발송 (밀리초)
             if (errorCount > 3 && alertLastSentAt < now - 3600_000) {
                 log.error("[{}] 스케쥴러 실패 알람 발송 {}.", schedulerCode, LocalDateTime.now());
-                String message = "스케쥴러 실행 연속 " + errorCount + "회 실패. lastError: " + e;
                 adminAlertClient.sendAlert(
                         AlertName.SCHEDULER_FAILED,
                         AlertStatus.FIRING,
                         schedulerCode,
-                        "[" + schedulerCode + "] 스케쥴러 실행 실패",
-                        message
+                        "스케쥴러 실패",
+                        "스케쥴러: " + schedulerCode + " Error: " + errorText(e)
                 );
                 alertLastSentAt = now;
                 failureAlertSent = true;
             }
             sleep(backoff);
         }
+    }
+
+    private static String errorText(Exception exception) {
+        String message = exception.getMessage();
+        if (message == null || message.isBlank()) {
+            return exception.getClass().getSimpleName();
+        }
+        return message;
     }
 
     private void sleep(long seconds) {
