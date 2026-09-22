@@ -49,25 +49,7 @@ public class AlertDetector {
                     AlertName.QUEUE_WAIT,
                     AlertThresholds.isWaitingExceeded(policy, metric),
                     room,
-                    annotations(AlertName.QUEUE_WAIT.name(), room, siteName, metric, now),
-                    now,
-                    forTicks,
-                    repeatInterval
-            ));
-            pending.addAll(evaluateRule(
-                    AlertName.ACTIVE_USERS,
-                    AlertThresholds.isActiveExceeded(policy, metric),
-                    room,
-                    annotations(AlertName.ACTIVE_USERS.name(), room, siteName, metric, now),
-                    now,
-                    forTicks,
-                    repeatInterval
-            ));
-            pending.addAll(evaluateRule(
-                    AlertName.VISITOR_SURGE,
-                    AlertThresholds.isWaitTimeExceeded(policy, metric),
-                    room,
-                    annotations(AlertName.VISITOR_SURGE.name(), room, siteName, metric, now),
+                    annotations(room, siteName, metric, now),
                     now,
                     forTicks,
                     repeatInterval
@@ -175,7 +157,7 @@ public class AlertDetector {
         return labels;
     }
 
-    private Map<String, String> annotations(String alertname, Room room, String siteName, RoomMetric metric, Instant now) {
+    private Map<String, String> annotations(Room room, String siteName, RoomMetric metric, Instant now) {
         String place = namedId(siteName, room.getSiteId()) + " / " + namedId(room.getName(), room.getRoomId());
         Map<String, String> annotations = new LinkedHashMap<>();
         annotations.put("summary", place + " 대기 발생");
