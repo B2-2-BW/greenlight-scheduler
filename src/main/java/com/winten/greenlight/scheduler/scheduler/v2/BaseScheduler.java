@@ -3,6 +3,7 @@ package com.winten.greenlight.scheduler.scheduler.v2;
 import com.winten.greenlight.scheduler.client.AdminAlertClient;
 import com.winten.greenlight.scheduler.domain.alert.AlertName;
 import com.winten.greenlight.scheduler.domain.alert.AlertStatus;
+import com.winten.greenlight.scheduler.domain.scheduler.SchedulerRunningStatus;
 import com.winten.greenlight.scheduler.domain.scheduler.SchedulerCode;
 import com.winten.greenlight.scheduler.domain.scheduler.SchedulerStatus;
 import io.lettuce.core.RedisException;
@@ -25,6 +26,7 @@ public class BaseScheduler {
     private final Runnable task;
 
     private final AdminAlertClient adminAlertClient;
+    private final SchedulerRunningStatus runningStatus;
 
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
 
@@ -45,7 +47,8 @@ public class BaseScheduler {
                          SchedulerDelayProperties delayProperties,
                          Runnable task,
                          SchedulePolicy schedulePolicy,
-                         AdminAlertClient adminAlertClient
+                         AdminAlertClient adminAlertClient,
+                         SchedulerRunningStatus runningStatus
     ) {
         if (schedulePolicy == SchedulePolicy.FIXED_RATE) {
             // REDIS 오류 발생 시 thread sleep을 실행하게 되는데, 이 때 FIXED RATE로 실행할 경우 누적 실패가 발생하므로 일단 사용되지 않도록 조치
@@ -56,6 +59,7 @@ public class BaseScheduler {
         this.task = task;
         this.schedulePolicy = schedulePolicy;
         this.adminAlertClient = adminAlertClient;
+        this.runningStatus = runningStatus;
 
         // 초기화 시 Registry에 자동 등록
         SchedulerRegistry.register(this.schedulerCode, this);
@@ -93,6 +97,7 @@ public class BaseScheduler {
 
         errorCount = 0;
         isRunning.set(true);
+        publishRunningStatus();
         log.info("[{}] 스케쥴러 시작 완료", schedulerCode);
     }
 
@@ -118,6 +123,18 @@ public class BaseScheduler {
             log.info("[{}] 스케쥴러 중단 완료", schedulerCode);
             isRunning.set(false);
             scheduledTask = null;
+            publishRunningStatus();
+        }
+    }
+
+    private void publishRunningStatus() {
+        if (runningStatus == null) {
+            return;
+        }
+        try {
+            runningStatus.save(schedulerCode, isRunning.get());
+        } catch (Exception exception) {
+            log.error("[{}] 스케줄러 동작 상태 기록 실패", schedulerCode, exception);
         }
     }
 
@@ -150,7 +167,7 @@ public class BaseScheduler {
                 log.error("[{}] 스케쥴러 연속 {}회 실패. {}초간 일시중단합니다.", schedulerCode, errorCount, backoff, e);
             }
             long now = System.currentTimeMillis();
-            // 알람은 1시간에 한번만 발송
+            // 알람은 1시간에 한번만 발송 (밀리초)
             if (errorCount > 3 && alertLastSentAt < now - 3600_000) {
                 log.error("[{}] 스케쥴러 실패 알람 발송 {}.", schedulerCode, LocalDateTime.now());
                 String message = "스케쥴러 실행 연속 " + errorCount + "회 실패. lastError: " + e;

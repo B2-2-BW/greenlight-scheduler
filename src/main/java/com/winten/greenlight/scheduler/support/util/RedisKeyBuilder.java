@@ -90,4 +90,8 @@ public class RedisKeyBuilder {
     public String siteInfoMeta(String siteId) {
         return prefix + ":site:" + siteId + ":meta";
     }
+
+    public String schedulerEnabled(String schedulerCode) {
+        return prefix + ":scheduler:" + schedulerCode + ":enabled";
+    }
 }

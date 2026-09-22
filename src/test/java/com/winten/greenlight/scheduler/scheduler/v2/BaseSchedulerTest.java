@@ -23,7 +23,8 @@ class BaseSchedulerTest {
                 delays,
                 () -> {},
                 SchedulePolicy.FIXED_DELAY,
-                alertClient
+                alertClient,
+                null
         );
         ReflectionTestUtils.setField(scheduler, "failureAlertSent", true);
 
