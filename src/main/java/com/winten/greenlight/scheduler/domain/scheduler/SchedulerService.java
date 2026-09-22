@@ -2,6 +2,7 @@ package com.winten.greenlight.scheduler.domain.scheduler;
 
 import com.winten.greenlight.scheduler.client.AdminAlertClient;
 import com.winten.greenlight.scheduler.domain.alert.AlertName;
+import com.winten.greenlight.scheduler.domain.alert.AlertSeverity;
 import com.winten.greenlight.scheduler.domain.alert.AlertStatus;
 import com.winten.greenlight.scheduler.scheduler.v2.SchedulerDelayProperties;
 import com.winten.greenlight.scheduler.scheduler.v2.SchedulerRegistry;
@@ -100,16 +101,17 @@ public class SchedulerService {
                         AlertName.SCHEDULER_STOPPED,
                         AlertStatus.FIRING,
                         code,
-                        "[" + code + "] 스케쥴러 중단",
-                        "스케쥴러가 비활성화되었습니다."
+                        "스케쥴러 중단",
+                        "스케쥴러: " + code + " 중단",
+                        AlertSeverity.WARNING
                 );
             } else {
                 adminAlertClient.sendAlert(
                         AlertName.SCHEDULER_STOPPED,
                         AlertStatus.RESOLVED,
                         code,
-                        "[" + code + "] 스케쥴러 활성화",
-                        "스케쥴러가 활성화되었습니다."
+                        "스케쥴러 실행",
+                        "스케쥴러: " + code + " 실행"
                 );
             }
         } catch (Exception exception) {

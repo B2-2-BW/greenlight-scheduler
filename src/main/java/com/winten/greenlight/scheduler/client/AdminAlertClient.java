@@ -46,13 +46,24 @@ public class AdminAlertClient {
             String summary,
             String message
     ) {
+        sendAlert(alertname, status, schedulerCode, summary, message, AlertSeverity.CRITICAL);
+    }
+
+    public void sendAlert(
+            AlertName alertname,
+            AlertStatus status,
+            SchedulerCode schedulerCode,
+            String summary,
+            String message,
+            AlertSeverity severity
+    ) {
         AlertStatus normalizedStatus = status == null ? AlertStatus.FIRING : status;
         Map<String, String> labels = new LinkedHashMap<>();
         labels.put("alertname", alertname.name());
         if (schedulerCode != null) {
             labels.put("scheduler_code", schedulerCode.name());
         }
-        labels.put("severity", AlertSeverity.CRITICAL.name());
+        labels.put("severity", (severity == null ? AlertSeverity.CRITICAL : severity).name());
         Map<String, String> annotations = new LinkedHashMap<>();
         annotations.put("summary", summary);
         annotations.put("description", message);

@@ -66,11 +66,11 @@ public class AlertDetector {
             AlertPolicy policy = policyFor(policies, state.getSiteId());
             Map<String, String> labels = labels(state.getAlertname(), state.getSiteId(), state.getRoomId());
             String siteName = siteNames.computeIfAbsent(state.getSiteId(), this::siteName);
-            Map<String, String> annotations = Map.of(
-                    "summary", "대기열이 비활성화되어 해제되었습니다.",
-                    "description", namedId(siteName, state.getSiteId()) + " / " + state.getRoomId(),
-                    "occurred_at", now.toString()
-            );
+            Map<String, String> annotations = new LinkedHashMap<>();
+            annotations.put("summary", "대기 해소");
+            annotations.put("description", "사이트: " + displayName(siteName, state.getSiteId())
+                    + "\n대기열: " + displayName(null, state.getRoomId()));
+            annotations.put("occurred_at", now.toString());
             AlertEvaluator.evaluate(
                     state.getAlertname(),
                     false,
@@ -111,6 +111,9 @@ public class AlertDetector {
                     alertStateStore.delete(fingerprint);
                 }
                 return null;
+            }
+            if (AlertStatus.RESOLVED.name().equals(decision.payload().status())) {
+                decision.payload().annotations().put("summary", "대기 해소");
             }
             return new Pending(decision, previous);
         }).stream().filter(item -> item != null).toList();
@@ -158,12 +161,11 @@ public class AlertDetector {
     }
 
     private Map<String, String> annotations(Room room, String siteName, RoomMetric metric, Instant now) {
-        String place = namedId(siteName, room.getSiteId()) + " / " + namedId(room.getName(), room.getRoomId());
         Map<String, String> annotations = new LinkedHashMap<>();
-        annotations.put("summary", place + " 대기 발생");
-        annotations.put("description", " 대기 " + metric.getTotalWaiting() + "명"
-                        + ", 체류 " + metric.getTotalActive() + "명"
-                        + ", 대기시간 " + metric.getEstimatedWaitTime() + "초");
+        annotations.put("summary", "대기 발생");
+        annotations.put("description", "사이트: " + displayName(siteName, room.getSiteId())
+                + "\n대기열: " + displayName(room.getName(), room.getRoomId())
+                + "\n대기 " + metric.getTotalWaiting() + "명, 체류 " + metric.getTotalActive() + "명, 예상 대기시간 " + metric.getEstimatedWaitTime() + "초");
         annotations.put("occurred_at", now.toString());
         return annotations;
     }
@@ -177,14 +179,11 @@ public class AlertDetector {
         }
     }
 
-    static String namedId(String name, String id) {
-        if (name == null || name.isBlank()) {
-            return id == null ? "" : id;
-        }
-        if (id == null || id.isBlank() || name.equals(id)) {
+    static String displayName(String name, String id) {
+        if (name != null && !name.isBlank()) {
             return name;
         }
-        return name + " (" + id + ")";
+        return id == null ? "" : id;
     }
 
     private record Pending(AlertEvaluator.Decision decision, AlertState previous) {
