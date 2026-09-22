@@ -143,15 +143,15 @@ public class BaseScheduler {
             errorCount = 0;
         } catch (Exception e) {
             errorCount += 1;
-            long backoff = Math.min(errorCount * 3, 30);
+            long backoff = Math.min(errorCount * 5, 30);
             if (e instanceof RedisException) {
                 log.warn("[{}] Redis 오류 연속 {}회 발생. {}초간 일시중단합니다. {}", schedulerCode, errorCount, backoff, e.toString());
             } else {
                 log.error("[{}] 스케쥴러 연속 {}회 실패. {}초간 일시중단합니다.", schedulerCode, errorCount, backoff, e);
             }
             long now = System.currentTimeMillis();
-            // 알람은 5분에 한번만 발송
-            if (errorCount > 3 && alertLastSentAt < now - 300_000) {
+            // 알람은 1시간에 한번만 발송
+            if (errorCount > 3 && alertLastSentAt < now - 3600_000) {
                 log.error("[{}] 스케쥴러 실패 알람 발송 {}.", schedulerCode, LocalDateTime.now());
                 String message = "스케쥴러 실행 연속 " + errorCount + "회 실패. lastError: " + e;
                 adminAlertClient.sendAlert(
