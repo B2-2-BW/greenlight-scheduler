@@ -1,6 +1,8 @@
 package com.winten.greenlight.scheduler.scheduler.v2;
 
+import com.winten.greenlight.scheduler.client.AdminAlertClient;
 import com.winten.greenlight.scheduler.domain.room.RoomService;
+import com.winten.greenlight.scheduler.domain.scheduler.SchedulerRunningStatus;
 import com.winten.greenlight.scheduler.domain.scheduler.SchedulerCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -12,6 +14,8 @@ public class SchedulerConfig {
 
     private final RoomService roomService;
     private final SchedulerDelayProperties delayProperties;
+    private final AdminAlertClient adminAlertClient;
+    private final SchedulerRunningStatus runningStatus;
 
     @Bean(initMethod = "start", destroyMethod = "stop")
     public BaseScheduler metricScheduler() {
@@ -19,7 +23,9 @@ public class SchedulerConfig {
                 SchedulerCode.METRIC,
                 delayProperties,
                 roomService::recordRoomMetric3s,
-                SchedulePolicy.FIXED_RATE
+                SchedulePolicy.FIXED_DELAY,
+                adminAlertClient,
+                runningStatus
         );
     }
 
@@ -29,7 +35,9 @@ public class SchedulerConfig {
                 SchedulerCode.WAITING_TO_READY,
                 delayProperties,
                 roomService::relocateCustomers,
-                SchedulePolicy.FIXED_DELAY
+                SchedulePolicy.FIXED_DELAY,
+                adminAlertClient,
+                runningStatus
         );
     }
 
@@ -39,7 +47,9 @@ public class SchedulerConfig {
                 SchedulerCode.REMOVE_EXPIRED,
                 delayProperties,
                 roomService::removeExpired,
-                SchedulePolicy.FIXED_RATE
+                SchedulePolicy.FIXED_DELAY,
+                adminAlertClient,
+                runningStatus
         );
     }
 }

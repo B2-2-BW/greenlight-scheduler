@@ -4,6 +4,7 @@ import com.influxdb.client.domain.WritePrecision;
 import com.influxdb.client.write.Point;
 import com.winten.greenlight.scheduler.db.repository.redis.room.CachedRoomService;
 import com.winten.greenlight.scheduler.db.repository.redis.room.RoomRepository;
+import com.winten.greenlight.scheduler.domain.alert.AlertDetector;
 import com.winten.greenlight.scheduler.domain.customer.WaitStatus;
 import com.winten.greenlight.scheduler.domain.influx.InfluxService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class RoomService {
     private final RoomRepository roomRepository;
     private final CachedRoomService cachedRoomService;
     private final InfluxService influxService;
+    private final AlertDetector alertDetector;
 
     @Value("${influxdb.org}")
     private String influxOrganization;
@@ -130,6 +132,8 @@ public class RoomService {
         var rooms = cachedRoomService.getAllRoomList();
         var updated = false;
         var metricPoints = new ArrayList<Point>();
+        var alertRooms = new ArrayList<Room>();
+        var alertMetrics = new ArrayList<RoomMetric>();
         for (var room: rooms) {
             if (!room.getEnabled()) { // 비활성화인 경우 기록하지 않음
                 continue;
@@ -143,6 +147,8 @@ public class RoomService {
             metric.setEstimatedWaitTime(estimatedWaitTime);
             roomRepository.saveRoomMetricLatest(metric);
             updated = true;
+            alertRooms.add(room);
+            alertMetrics.add(metric);
             // 운영환경인 경우에만 influxDB에 저장
             if (room.getRoomEnvironment() == RoomEnvironment.LIVE) {
                 var metricPoint = makeMetricPoint(room, metric);
@@ -154,6 +160,11 @@ public class RoomService {
         }
 
         influxService.writePointsAsync(influxBucket, influxOrganization, metricPoints);
+        try {
+            alertDetector.evaluate(alertRooms, alertMetrics);
+        } catch (Exception exception) {
+            log.warn("Alert detector failed", exception);
+        }
     }
 
     private long calculateEstimatedWaitTime(long capacity, long totalActive, long totalWaiting, long recentlyExited) {
@@ -168,8 +179,7 @@ public class RoomService {
             // recentlyExited는 3분간 나간 전체 사용자 수. 30초 머무는 상황이므로 capacity가 1일 때 3분동안 6명이 나감.
             recentlyExited = Math.round(capacity * 2.1 + recentlyExited * 0.3);
         }
-        long estimatedWaitTime = (remainder * 180) / recentlyExited;
-        return Math.max(estimatedWaitTime / 2, 1); // 26.09.03 예외적으로 대기시간 50% 보정
+        return (remainder * 180) / recentlyExited;
     }
 
     private Point makeMetricPoint(Room r, RoomMetric m) {

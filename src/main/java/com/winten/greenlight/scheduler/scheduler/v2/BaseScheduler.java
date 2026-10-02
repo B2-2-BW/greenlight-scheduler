@@ -1,11 +1,17 @@
 package com.winten.greenlight.scheduler.scheduler.v2;
 
-import com.winten.greenlight.scheduler.domain.scheduler.SchedulerStatus;
+import com.winten.greenlight.scheduler.client.AdminAlertClient;
+import com.winten.greenlight.scheduler.domain.alert.AlertName;
+import com.winten.greenlight.scheduler.domain.alert.AlertStatus;
+import com.winten.greenlight.scheduler.domain.scheduler.SchedulerRunningStatus;
 import com.winten.greenlight.scheduler.domain.scheduler.SchedulerCode;
+import com.winten.greenlight.scheduler.domain.scheduler.SchedulerStatus;
+import io.lettuce.core.RedisException;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.LocalDateTime;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -19,6 +25,9 @@ public class BaseScheduler {
 
     private final Runnable task;
 
+    private final AdminAlertClient adminAlertClient;
+    private final SchedulerRunningStatus runningStatus;
+
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
 
     @Getter @Setter
@@ -29,23 +38,28 @@ public class BaseScheduler {
 
     private ScheduledExecutorService executorService;
     private ScheduledFuture<?> scheduledTask;
-    private int errorCount;
+    private int errorCount = 0;
+    private boolean failureAlertSent = false;
     private SchedulePolicy schedulePolicy;
+    private long alertLastSentAt = 0;
 
-    /**
-     * @param schedulerCode 스케줄러 타입 (Registry 등록용)
-     * @param delayProperties   딜레이 설정값 (초)
-     * @param task          실행할 비즈니스 로직
-     */
-    public BaseScheduler(SchedulerCode schedulerCode, SchedulerDelayProperties delayProperties, Runnable task) {
-        this(schedulerCode, delayProperties, task, SchedulePolicy.FIXED_DELAY);
-    }
-
-    public BaseScheduler(SchedulerCode schedulerCode, SchedulerDelayProperties delayProperties, Runnable task, SchedulePolicy schedulePolicy) {
+    public BaseScheduler(SchedulerCode schedulerCode,
+                         SchedulerDelayProperties delayProperties,
+                         Runnable task,
+                         SchedulePolicy schedulePolicy,
+                         AdminAlertClient adminAlertClient,
+                         SchedulerRunningStatus runningStatus
+    ) {
+        if (schedulePolicy == SchedulePolicy.FIXED_RATE) {
+            // REDIS 오류 발생 시 thread sleep을 실행하게 되는데, 이 때 FIXED RATE로 실행할 경우 누적 실패가 발생하므로 일단 사용되지 않도록 조치
+            throw new IllegalArgumentException("SchedulePolicy.FIXED_RATE is not supported.");
+        }
         this.schedulerCode = schedulerCode;
         this.delayProperties = delayProperties;
         this.task = task;
         this.schedulePolicy = schedulePolicy;
+        this.adminAlertClient = adminAlertClient;
+        this.runningStatus = runningStatus;
 
         // 초기화 시 Registry에 자동 등록
         SchedulerRegistry.register(this.schedulerCode, this);
@@ -83,6 +97,7 @@ public class BaseScheduler {
 
         errorCount = 0;
         isRunning.set(true);
+        publishRunningStatus();
         log.info("[{}] 스케쥴러 시작 완료", schedulerCode);
     }
 
@@ -108,6 +123,18 @@ public class BaseScheduler {
             log.info("[{}] 스케쥴러 중단 완료", schedulerCode);
             isRunning.set(false);
             scheduledTask = null;
+            publishRunningStatus();
+        }
+    }
+
+    private void publishRunningStatus() {
+        if (runningStatus == null) {
+            return;
+        }
+        try {
+            runningStatus.save(schedulerCode, isRunning.get());
+        } catch (Exception exception) {
+            log.error("[{}] 스케줄러 동작 상태 기록 실패", schedulerCode, exception);
         }
     }
 
@@ -119,14 +146,57 @@ public class BaseScheduler {
     private void safeExecute() {
         try {
             task.run();
+            if (failureAlertSent) {
+                adminAlertClient.sendAlert(
+                        AlertName.SCHEDULER_FAILED,
+                        AlertStatus.RESOLVED,
+                        schedulerCode,
+                        "스케쥴러 실행",
+                        "스케쥴러: " + schedulerCode + " 실행"
+                );
+                failureAlertSent = false;
+                alertLastSentAt = 0;
+            }
             errorCount = 0;
         } catch (Exception e) {
-            log.error("[{}] 로직 실행 실패", schedulerCode, e);
             errorCount += 1;
-            if (errorCount == 3) {
-                this.stop();
-                log.error("[{}] 작업 실패가 지속되어 스케줄러를 종료합니다.", schedulerCode);
+            long backoff = Math.min(errorCount * 5, 30);
+            if (e instanceof RedisException) {
+                log.warn("[{}] Redis 오류 연속 {}회 발생. {}초간 일시중단합니다. {}", schedulerCode, errorCount, backoff, e.toString());
+            } else {
+                log.error("[{}] 스케쥴러 연속 {}회 실패. {}초간 일시중단합니다.", schedulerCode, errorCount, backoff, e);
             }
+            long now = System.currentTimeMillis();
+            // 알람은 1시간에 한번만 발송 (밀리초)
+            if (errorCount > 3 && alertLastSentAt < now - 3600_000) {
+                log.error("[{}] 스케쥴러 실패 알람 발송 {}.", schedulerCode, LocalDateTime.now());
+                adminAlertClient.sendAlert(
+                        AlertName.SCHEDULER_FAILED,
+                        AlertStatus.FIRING,
+                        schedulerCode,
+                        "스케쥴러 실패",
+                        "스케쥴러: " + schedulerCode + " Error: " + errorText(e)
+                );
+                alertLastSentAt = now;
+                failureAlertSent = true;
+            }
+            sleep(backoff);
+        }
+    }
+
+    private static String errorText(Exception exception) {
+        String message = exception.getMessage();
+        if (message == null || message.isBlank()) {
+            return exception.getClass().getSimpleName();
+        }
+        return message;
+    }
+
+    private void sleep(long seconds) {
+        try {
+            Thread.sleep(seconds * 1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

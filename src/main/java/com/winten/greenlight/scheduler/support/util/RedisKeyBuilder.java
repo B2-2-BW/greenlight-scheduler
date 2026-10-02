@@ -74,4 +74,24 @@ public class RedisKeyBuilder {
     public String siteRoomId() {
         return prefix + ":site:roomId";
     }
+
+    public String alert(String fingerprint) {
+        return prefix + ":alert:" + fingerprint;
+    }
+
+    public String alertPattern() {
+        return prefix + ":alert:*";
+    }
+
+    public String alertPolicy(String siteId) {
+        return prefix + ":admin:alert_policy:" + siteId;
+    }
+
+    public String siteInfoMeta(String siteId) {
+        return prefix + ":site:" + siteId + ":meta";
+    }
+
+    public String schedulerEnabled(String schedulerCode) {
+        return prefix + ":scheduler:" + schedulerCode + ":enabled";
+    }
 }
