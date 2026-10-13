@@ -111,7 +111,8 @@ public class SchedulerService {
                         AlertStatus.RESOLVED,
                         code,
                         "스케쥴러 실행",
-                        "스케쥴러: " + code + " 실행"
+                        "스케쥴러: " + code + " 실행",
+                        AlertSeverity.WARNING
                 );
             }
         } catch (Exception exception) {

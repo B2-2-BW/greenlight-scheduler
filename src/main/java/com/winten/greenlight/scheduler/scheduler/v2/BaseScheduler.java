@@ -124,7 +124,32 @@ public class BaseScheduler {
             isRunning.set(false);
             scheduledTask = null;
             publishRunningStatus();
+            resolveFailureBecauseStopped();
         }
+    }
+
+    private void resolveFailureBecauseStopped() {
+        if (!failureAlertSent) {
+            return;
+        }
+        try {
+            adminAlertClient.sendAlert(
+                    AlertName.SCHEDULER_FAILED,
+                    AlertStatus.RESOLVED,
+                    schedulerCode,
+                    "스케쥴러 실패",
+                    "스케쥴러: " + schedulerCode + " 중단"
+            );
+            clearFailureAlert();
+        } catch (Exception exception) {
+            log.error("[{}] 스케쥴러 실패 해제 알람 발송 실패", schedulerCode, exception);
+        }
+    }
+
+    private void clearFailureAlert() {
+        failureAlertSent = false;
+        alertLastSentAt = 0;
+        errorCount = 0;
     }
 
     private void publishRunningStatus() {
@@ -154,8 +179,7 @@ public class BaseScheduler {
                         "스케쥴러 실행",
                         "스케쥴러: " + schedulerCode + " 실행"
                 );
-                failureAlertSent = false;
-                alertLastSentAt = 0;
+                clearFailureAlert();
             }
             errorCount = 0;
         } catch (Exception e) {
