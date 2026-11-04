@@ -32,36 +32,35 @@ return #members
 """, Long.class);
 
     private final RedisScript<List> roomMetricCalculationScript = RedisScript.of("""
-        -- 1. 대기/활성 데이터 계산
+        -- 1. 대기/활성 데이터 계산 (현재 ZSET 크기. 3초 버킷 스냅샷이 아님)
         local totalWaiting = redis.call('ZCARD', KEYS[1])
         local totalActive = redis.call('ZCARD', KEYS[2])
 
         -- 2. 3초 구간 유입/입장/이탈 데이터 조회
-        local counts = redis.call('MGET', KEYS[3], KEYS[4], KEYS[5], KEYS[6], KEYS[7], KEYS[8])
-        local waitingIncr = tonumber(counts[1] or '0')
-        local enteredIncr = tonumber(counts[2] or '0')
-        local exitedIncr = tonumber(counts[3] or '0')
-        local cancelledIncr = tonumber(counts[4] or '0')
-        local exits = { exitedIncr, tonumber(counts[5] or '0'), tonumber(counts[6] or '0') }
-        table.sort(exits)
-        local medianExitRate = exits[2] / 3.0
+        local waitingIncr = tonumber(redis.call('GET', KEYS[3]) or '0')
+        local enteredIncr = tonumber(redis.call('GET', KEYS[4]) or '0')
+        local exitedIncr = tonumber(redis.call('GET', KEYS[5]) or '0')
+        local cancelledIncr = tonumber(redis.call('GET', KEYS[6]) or '0')
 
-        local state = redis.call('HMGET', KEYS[9], 'predictedExitRate', 'lastBucket')
-        local predictedExitRate = tonumber(state[1])
-        local lastBucket = tonumber(state[2])
-        local targetBucket = tonumber(ARGV[1])
-        if not lastBucket or targetBucket > lastBucket then
-            if predictedExitRate then
-                predictedExitRate = predictedExitRate * 0.5 + medianExitRate * 0.5
-            else
-                predictedExitRate = medianExitRate
-            end
-            redis.call('HSET', KEYS[9], 'predictedExitRate', tostring(predictedExitRate),
-                'lastBucket', ARGV[1])
+        -- 3. EXITED 60개 버킷 리스트 추출 (KEYS[6] 부터 끝까지)
+        local exitedKeys = {}
+        for i = 7, #KEYS do
+            exitedKeys[#exitedKeys + 1] = KEYS[i]
         end
 
-        -- Redis는 Lua 숫자 반환값의 소수 부분을 버리므로, 예측 퇴장 인원은 문자열로 반환한다.
-        return { totalWaiting, totalActive, tostring(predictedExitRate), waitingIncr, enteredIncr, exitedIncr, cancelledIncr }
+        -- 4. MGET으로 60개 키를 한 번에 조회 후 합산
+        local recentlyExited = 0
+        if #exitedKeys > 0 then
+            -- unpack은 배열을 인자 목록으로 전개합니다
+            local exitedVals = redis.call('MGET', unpack(exitedKeys))
+            for _, val in ipairs(exitedVals) do
+                if val then
+                    recentlyExited = recentlyExited + tonumber(val)
+                end
+            end
+        end
+
+        return { totalWaiting, totalActive, recentlyExited, waitingIncr, enteredIncr, exitedIncr, cancelledIncr }
     """, List.class);
 
 

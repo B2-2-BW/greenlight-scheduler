@@ -10,7 +10,7 @@ public class RoomMetric {
     private int roomCapacity; // 대기열 최대 수용인원
     private long totalWaiting; // 현재 총 대기인원
     private long totalActive; // 현재 총 활성사용자
-    private Double predictedExitRate; // 예측한 초당 퇴장 인원
+    private long recentlyExited; // 3분동안 화면을 이탈한 전체 사용자 수
     private long waitingCount; // 3초동안 증가한 대기인원 수
     private long enteredCount; // 3초동안 화면에 진입한 인원 수
     private long exitedCount; // 3초동안 화면에서 이탈한 사용자 수

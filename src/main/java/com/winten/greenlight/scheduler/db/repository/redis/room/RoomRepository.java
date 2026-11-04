@@ -137,34 +137,27 @@ public class RoomRepository {
         keys.add(redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.ENTERED, targetBucket));
         keys.add(redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.EXITED, targetBucket));
         keys.add(redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.CANCELLED, targetBucket));
-        // 현재 구간의 퇴장 인원은 재사용하고, 이전 두 구간의 버킷만 추가로 조회한다.
-        for (int i = 1; i < 3; i++) {
+        // 7~66번 키: 과거 3분(60개) 동안의 EXITED 버킷 키
+        for (int i = 0; i < 60; i++) {
             long pastBucket = targetBucket - (i * 3000);
             keys.add(redisKeyBuilder.roomMetricCounter(roomId, WaitStatus.EXITED, pastBucket));
         }
-        keys.add(redisKeyBuilder.roomMetricExitPrediction(roomId));
 
-        // 예상 퇴장인원 수치. 예상 대기시간 계산에 활용
-        // 최근 3개 구간(구간당 3초, 총 9초)의 퇴장 인원으로 초당 퇴장 인원을 예측한다.
-        // 예상 대기시간이 급증/감하지 않도록 중앙값을 사용하고, 지수이동평균(EWMA)을 적용한다
-        // 계산식: 예측 초당 퇴장 인원 = 직전 예측값 * 0.5 + (3개 구간 퇴장 인원의 중앙값 / 3초) * 0.5
-        // 직전 예측값이 없으면 중앙값 / 3초를 최초 예측값으로 사용
         @SuppressWarnings("unchecked")
-        List<Object> result = (List<Object>) redisTemplate.execute(
+        List<Long> result = (List<Long>) redisTemplate.execute(
             roomRedisScript.getRoomMetricCalculationScript(),
-            keys,
-            String.valueOf(targetBucket)
+            keys
         );
 
         var metric = RoomMetric.builder()
                 .roomId(roomId)
-                .totalWaiting(((Number) result.get(0)).longValue())
-                .totalActive(((Number) result.get(1)).longValue())
-                .predictedExitRate(Double.valueOf(result.get(2).toString()))
-                .waitingCount(((Number) result.get(3)).longValue())
-                .enteredCount(((Number) result.get(4)).longValue())
-                .exitedCount(((Number) result.get(5)).longValue()) // 이탈은 exited + dead 합한 값
-                .cancelledCount(((Number) result.get(6)).longValue()) // 이탈은 exited + dead 합한 값
+                .totalWaiting(result.get(0))
+                .totalActive(result.get(1))
+                .recentlyExited(result.get(2))
+                .waitingCount(result.get(3))
+                .enteredCount(result.get(4))
+                .exitedCount(result.get(5)) // 이탈은 exited + dead 합한 값
+                .cancelledCount(result.get(6)) // 이탈은 exited + dead 합한 값
                 .build();
 
         double waitingRate = (double) metric.getWaitingCount() / 3.0;

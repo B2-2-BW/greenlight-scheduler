@@ -60,9 +60,6 @@ public class RedisKeyBuilder {
     public String roomMetricLatest(String roomId) {
         return prefix + ":room:{" + roomId + "}:metric:latest";
     }
-    public String roomMetricExitPrediction(String roomId) {
-        return prefix + ":room:{" + roomId + "}:metric:exit_prediction";
-    }
     public String roomMetricVersion() {
         return prefix + ":room:versions:metric";
     }

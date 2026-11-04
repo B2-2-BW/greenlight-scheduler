@@ -162,12 +162,10 @@ public class AlertDetector {
 
     private Map<String, String> annotations(Room room, String siteName, RoomMetric metric, Instant now) {
         Map<String, String> annotations = new LinkedHashMap<>();
-        String estimatedWaitTime = metric.getEstimatedWaitTime() < 0
-                ? "예측 불가" : metric.getEstimatedWaitTime() + "초";
         annotations.put("summary", "대기 발생");
         annotations.put("description", "사이트: " + displayName(siteName, room.getSiteId())
                 + "\n대기열: " + displayName(room.getName(), room.getRoomId())
-                + "\n대기 " + metric.getTotalWaiting() + "명, 체류 " + metric.getTotalActive() + "명, 예상 대기시간 " + estimatedWaitTime);
+                + "\n대기 " + metric.getTotalWaiting() + "명, 체류 " + metric.getTotalActive() + "명, 예상 대기시간 " + metric.getEstimatedWaitTime() + "초");
         annotations.put("occurred_at", now.toString());
         return annotations;
     }
