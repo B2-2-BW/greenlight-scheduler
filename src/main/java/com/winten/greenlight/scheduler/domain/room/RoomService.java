@@ -31,7 +31,6 @@ public class RoomService {
     private String influxBucket;
 
     private final String MEASUREMENT_ROOM_METRIC = "room_metric";
-    private static final double defaultStaySeconds = 30;
     private static final int EXPIRED_WAITING_CHUNK_SIZE = 1_000;
     private static final int EXPIRED_WAITING_MAX_CHUNKS = 5;
     /**
@@ -144,7 +143,7 @@ public class RoomService {
                     targetBucket
             );
             metric.setRoomCapacity(room.getCapacity());
-            long estimatedWaitTime = calculateEstimatedWaitTime(room.getCapacity(), metric.getTotalActive(), metric.getTotalWaiting(), metric.getPredictedExitRate());
+            long estimatedWaitTime = calculateEstimatedWaitTime(room.getCapacity(), metric.getTotalActive(), metric.getTotalWaiting(), metric.getRecentlyExited());
             metric.setEstimatedWaitTime(estimatedWaitTime);
             roomRepository.saveRoomMetricLatest(metric);
             updated = true;
@@ -168,19 +167,19 @@ public class RoomService {
         }
     }
 
-    private long calculateEstimatedWaitTime(long capacity, long totalActive, long totalWaiting, Double predictedExitRate) {
+    private long calculateEstimatedWaitTime(long capacity, long totalActive, long totalWaiting, long recentlyExited) {
         if (capacity <= 0) { // capacity가 0보다 작으면 입장불가
             return -1;
         }
         long remainder = totalWaiting - (capacity - totalActive);
-        if (remainder <= 0) {  // 남는 자리가 있다면 바로입장 가능.
+        if (remainder <= 0) {  // 1. 남는 자리가 있다면 바로입장 가능.
             return 0;
         }
-        // 예상 퇴장인원 수가 없다면 기본값 적용
-        if (predictedExitRate == null || !Double.isFinite(predictedExitRate) || predictedExitRate <= 0) {
-            predictedExitRate = capacity / defaultStaySeconds;
+        if (recentlyExited < capacity * 3) { // 2. 집계된 recentlyExited가 너무 적을 때 임의로 수치를 조정함
+            // recentlyExited는 3분간 나간 전체 사용자 수. 30초 머무는 상황이므로 capacity가 1일 때 3분동안 6명이 나감.
+            recentlyExited = Math.round(capacity * 2.1 + recentlyExited * 0.3);
         }
-        return (long) Math.ceil(remainder / predictedExitRate);
+        return (remainder * 180) / recentlyExited;
     }
 
     private Point makeMetricPoint(Room r, RoomMetric m) {
@@ -190,7 +189,7 @@ public class RoomService {
                 .addField("room_capacity", m.getRoomCapacity())
                 .addField("total_waiting", m.getTotalWaiting())
                 .addField("total_active", m.getTotalActive())
-                .addField("predicted_exit_rate", m.getPredictedExitRate())
+                .addField("recently_exited_3m", m.getRecentlyExited())
                 .addField("waiting_count", m.getWaitingCount())
                 .addField("entered_count", m.getEnteredCount())
                 .addField("exited_count", m.getExitedCount())
